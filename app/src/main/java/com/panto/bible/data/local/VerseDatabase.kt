@@ -4,9 +4,10 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.panto.bible.data.model.SearchHistory
 import com.panto.bible.data.model.Verse
 
-@Database(entities = [Verse::class], version = 1, exportSchema = false)
+@Database(entities = [Verse::class, SearchHistory::class], version = 1, exportSchema = false)
 abstract class VerseDatabase : RoomDatabase() {
     abstract fun verseDao(): VerseDao
     abstract fun searchHistoryDao(): SearchHistoryDao

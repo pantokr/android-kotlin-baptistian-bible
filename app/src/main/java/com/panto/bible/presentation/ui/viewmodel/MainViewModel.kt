@@ -34,17 +34,17 @@ class MainViewModel(
     private val _searchedVerses = MutableStateFlow<List<Verse>>(emptyList())
     val searchedVerses = _searchedVerses.asStateFlow()
 
+    private val _historyQueries = MutableStateFlow<List<String>>(emptyList())
+    val historyQueries = _historyQueries.asStateFlow()
+
+    private val _historyVerses = MutableStateFlow<List<Verse>>(emptyList())
+    val historyVerses = _historyVerses.asStateFlow()
+
     private val _currentPage = MutableStateFlow(preferenceManager.currentPage)
     val currentPage = _currentPage.asStateFlow()
 
     private val _currentVersion = MutableStateFlow(preferenceManager.currentVersion)
     val currentVersion = _currentVersion
-
-    private val _historyQuery = MutableStateFlow(preferenceManager.historyQuery)
-    val historyQuery = _historyQuery
-
-    private val _historyVerses = MutableStateFlow(preferenceManager.historyVerses)
-    val historyVerses = _historyVerses
 
 
     init {
@@ -92,13 +92,57 @@ class MainViewModel(
         _selectedVerse.value = index
     }
 
-    fun addHistory(page: Int, verse: Int) {
+    fun addHistory(page: Int, verse: Int, query: String) {
+        viewModelScope.launch {
+            try {
+                val currentTime = System.currentTimeMillis().toInt()
 
+                val isExist = verseLocalDataSource.isSearchHistoryExist(page, verse, query)
+
+                if (isExist) {
+                    verseLocalDataSource.deleteSearchHistory(page, verse, query)
+                }
+
+                verseLocalDataSource.insertSearchHistory(
+                    time = currentTime,
+                    page = page,
+                    verse = verse,
+                    query = query
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "검색 기록 추가 실패: ${e.message}")
+            }
+        }
+    }
+
+
+    fun getHistories() {
+        viewModelScope.launch {
+            try {
+                val searchHistories = verseLocalDataSource.getRecentSearchHistories()
+
+                val queryList = mutableListOf<String>()
+                val verseList = mutableListOf<Verse>()
+                searchHistories.forEach { history ->
+                    val verse = verseLocalDataSource.getVerseByPageAndVerse(
+                        version = _currentVersion.value ?: "han",
+                        page = history.page,
+                        verse = history.verse
+                    )
+                    queryList.add(history.query)
+                    verseList.add(verse)
+                }
+
+                _historyQueries.value = queryList
+                _historyVerses.value = verseList
+            } catch (e: Exception) {
+                Log.e(TAG, "검색 히스토리 로드 실패: ${e.message}")
+            }
+        }
     }
 
     private suspend fun loadVerses() {
         viewModelScope.launch {
-
             for (version in VERSION_LIST) {
                 if (verseLocalDataSource.getVersesCount(version) == 0) {
                     verseLocalDataSource.loadVersesFromCSV("${version}.csv", version)
@@ -109,7 +153,6 @@ class MainViewModel(
                 for (version in VERSION_LIST) {
                     currentCount += verseLocalDataSource.getVersesCount(version)
                 }
-                Log.d(TAG, "loadVerses: ${currentCount}")
                 if (currentCount >= VERSE_COUNT_LIST.sum()) {
                     Log.d(TAG, "모든 구절 로드 완료")
                     break
