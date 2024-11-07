@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -268,7 +269,11 @@ fun AppBar(
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp)
-                    .clickable(onClick = onSearchClick)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                        onClick = onSearchClick
+                    )
                     .shadow(4.dp, shape = RoundedCornerShape(4.dp))
                     .background(
                         MaterialTheme.colorScheme.background, shape = RoundedCornerShape(4.dp)
@@ -362,10 +367,14 @@ fun HighlightedText(
                         fontSize = fontSize.sp,
                         lineHeight = paragraphSpacing.sp,
                         letterSpacing = 0.1f.sp
-                    ), color = Color.Red, modifier = Modifier.clickable(onClick = {
-                        val order = commentaryOrderList.indexOf(word)
-                        onClick(commentaryList?.get(order) ?: "")
-                    })
+                    ), color = Color.Red, modifier = Modifier.clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                        onClick = {
+                            val order = commentaryOrderList.indexOf(word)
+                            onClick(commentaryList?.get(order) ?: "")
+                        },
+                    )
                 )
             } else {
                 Text(

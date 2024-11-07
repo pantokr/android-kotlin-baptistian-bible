@@ -3,6 +3,7 @@ package com.panto.bible.data.local
 import android.content.Context
 import android.util.Log
 import com.panto.bible.data.local.BibleConstant.TAG
+import com.panto.bible.data.model.SearchHistory
 import com.panto.bible.data.model.Verse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -58,7 +59,6 @@ class VerseLocalDataSource(private val context: Context) {
             verseDao.getVerseByPageAndVerse(page, verse)
         }
 
-
     suspend fun getVerses(version: String, book: Int, chapter: Int): List<Verse> =
         withContext(Dispatchers.IO) {
             val database = VerseDatabase.getDatabase(context, version)
@@ -86,5 +86,44 @@ class VerseLocalDataSource(private val context: Context) {
             val verseDao = database.verseDao()
 
             verseDao.searchVersesByTextRaw(searchTerm)
+        }
+
+    suspend fun insertSearchHistory(time: Int, page: Int, verse: Int, query: String) =
+        withContext(Dispatchers.IO) {
+            val database = VerseDatabase.getDatabase(context, "history")
+            val searchHistoryDao = database.searchHistoryDao()
+
+            val searchHistory = SearchHistory(
+                time = time,
+                page = page,
+                verse = verse,
+                query = query
+            )
+
+            searchHistoryDao.insertSearchHistory(searchHistory)
+        }
+
+    suspend fun deleteSearchHistory(page: Int, verse: Int, query: String) {
+        withContext(Dispatchers.IO) {
+            val database = VerseDatabase.getDatabase(context, "history")
+            val searchHistoryDao = database.searchHistoryDao()
+            searchHistoryDao.deleteSearchHistory(page, verse, query)
+        }
+    }
+
+    suspend fun isSearchHistoryExist(page: Int, verse: Int, query: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            val database = VerseDatabase.getDatabase(context, "history")
+            val searchHistoryDao = database.searchHistoryDao()
+            val result = searchHistoryDao.isSearchHistoryExist(page, verse, query)
+            result > 0
+        }
+    }
+
+    suspend fun getRecentSearchHistories(): List<SearchHistory> =
+        withContext(Dispatchers.IO) {
+            val database = VerseDatabase.getDatabase(context, "history")
+            val searchHistoryDao = database.searchHistoryDao()
+            searchHistoryDao.getRecentSearchHistories()
         }
 }

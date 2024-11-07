@@ -10,6 +10,12 @@ interface SearchHistoryDao {
     @Insert
     suspend fun insertSearchHistory(searchHistory: SearchHistory)
 
-    @Query("SELECT * FROM search_history ORDER BY time DESC LIMIT 10")
+    @Query("DELETE FROM search_history WHERE page = :page AND verse = :verse AND query = :query")
+    suspend fun deleteSearchHistory(page: Int, verse: Int, query: String)
+
+    @Query("SELECT COUNT(*) FROM search_history WHERE page = :page AND verse = :verse AND query = :query")
+    suspend fun isSearchHistoryExist(page: Int, verse: Int, query: String): Int
+
+    @Query("SELECT * FROM search_history ORDER BY time DESC LIMIT 100")
     suspend fun getRecentSearchHistories(): List<SearchHistory>
 }
