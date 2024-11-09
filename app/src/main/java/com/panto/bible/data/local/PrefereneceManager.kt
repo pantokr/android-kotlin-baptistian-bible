@@ -9,9 +9,9 @@ class PreferenceManager(context: Context) {
         get() = sharedPref.getInt("currentPage", 0)
         set(value) = sharedPref.edit().putInt("currentPage", value).apply()
 
-    var currentVersion: String?
-        get() = sharedPref.getString("currentVersion", "han")
-        set(value) = sharedPref.edit().putString("currentVersion", value).apply()
+    var currentVersion: Int
+        get() = sharedPref.getInt("currentVersion", 0)
+        set(value) = sharedPref.edit().putInt("currentVersion", value).apply()
 
     var fontSize: Float
         get() = sharedPref.getFloat("fontSize", 16f)

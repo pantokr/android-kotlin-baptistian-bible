@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,7 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.panto.bible.R
-import com.panto.bible.data.local.BibleConstant.BOOK_LIST_KOR
+import com.panto.bible.data.model.Verse
 import com.panto.bible.presentation.ui.viewmodel.MainViewModel
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
 import com.panto.bible.ui.ThemedIcon
@@ -74,6 +75,7 @@ fun VerseScreen(
     val verses by mainViewModel.verses.collectAsState()
     val selectedVerse by mainViewModel.selectedVerse.collectAsState()
     val currentPage by mainViewModel.currentPage.collectAsState()
+    val currentBookList by mainViewModel.currentBookList.collectAsState()
 
     val fontSize by settingsViewModel.fontSize.collectAsState()
     val paragraphSpacing by settingsViewModel.paragraphSpacing.collectAsState()
@@ -88,18 +90,33 @@ fun VerseScreen(
     val buttonsOffsetY = animateMenuOffsetY(target = isMenuVisible, startOffset = 50f)
 
     val listState = rememberLazyListState()
-    var dragOffsetX by remember { mutableStateOf(0f) }
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
     val scrollConnection = object : NestedScrollConnection {
         override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
             val scrollY = available.y
             if (scrollY != 0f) {
                 isMenuVisible = false
+                isPopupVisible = false
             }
             return Offset.Zero
         }
     }
 
     var explanation by remember { mutableStateOf("") }
+
+    if (selectedVerse != -1) {
+        LaunchedEffect(selectedVerse) {
+            listState.scrollToItem(selectedVerse)
+        }
+    } else {
+        LaunchedEffect(selectedVerse) {
+            listState.scrollToItem(0)
+        }
+    }
+    LaunchedEffect(currentPage) {
+        isPopupVisible = false
+        listState.animateScrollToItem(0)
+    }
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -131,11 +148,12 @@ fun VerseScreen(
                     }, onDrag = { _, dragAmount ->
                         dragOffsetX += dragAmount.x
                     })
-                }) {
+                }
+        ) {
             item { Spacer(modifier = Modifier.height(100.dp)) }
             item {
                 Text(
-                    text = "${BOOK_LIST_KOR[verses[0].book]} ${verses[0].chapter + 1}",
+                    text = "${currentBookList[verses[0].book]} ${verses[0].chapter + 1}",
                     fontSize = (fontSize * 1.6f).sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -195,8 +213,7 @@ fun VerseScreen(
                                 explanation = commentary
                                 isPopupVisible = true
                                 isMenuVisible = false
-                            }
-                        )
+                            })
                     }
                 }
             }
@@ -208,11 +225,10 @@ fun VerseScreen(
         )
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            AppBar(mainViewModel = mainViewModel,
+            AppBar(verses,
+                currentBookList,
                 appbarOffsetY = appbarOffsetY,
                 menuAlpha = menuAlpha,
                 onSearchClick = {
@@ -222,40 +238,26 @@ fun VerseScreen(
                 onMenuClick = {})
             Spacer(modifier = Modifier.weight(1f))
             FloatingButtons(
-                mainViewModel = mainViewModel,
-                buttonsOffsetY = buttonsOffsetY,
-                menuAlpha = menuAlpha
+                buttonsOffsetY = buttonsOffsetY, menuAlpha = menuAlpha
             )
         }
-    }
-    if (selectedVerse != -1) {
-        LaunchedEffect(selectedVerse) {
-            listState.scrollToItem(selectedVerse)
-        }
-    } else {
-        LaunchedEffect(selectedVerse) {
-            listState.scrollToItem(0)
-        }
-    }
-    LaunchedEffect(currentPage) {
-        listState.animateScrollToItem(0)
     }
 }
 
 
 @Composable
 fun AppBar(
-    mainViewModel: MainViewModel,
+    verses: List<Verse>,
+    currentBookList: Array<String>,
     appbarOffsetY: Animatable<Float, *>,
     menuAlpha: Animatable<Float, *>,
     onSearchClick: () -> Unit,
     onMenuClick: () -> Unit
 ) {
-    val verses by mainViewModel.verses.collectAsState()
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(16.dp)
             .offset(y = appbarOffsetY.value.dp)
             .alpha(menuAlpha.value)
             .height(60.dp)
@@ -290,7 +292,7 @@ fun AppBar(
                         return
                     }
                     Text(
-                        "${BOOK_LIST_KOR[verses[0].book]} ${verses[0].chapter + 1}",
+                        "${currentBookList[verses[0].book]} ${verses[0].chapter + 1}",
                         fontSize = 16.sp,
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
@@ -300,7 +302,7 @@ fun AppBar(
                     ThemedIcon(
                         iconResLight = R.drawable.search_light,
                         iconResDark = R.drawable.search_dark,
-                        Modifier
+                        modifier = Modifier
                             .size(48.dp)
                             .padding(12.dp)
                     )
@@ -321,7 +323,6 @@ fun AppBar(
 
 @Composable
 fun FloatingButtons(
-    mainViewModel: MainViewModel,
     buttonsOffsetY: Animatable<Float, *>,
     menuAlpha: Animatable<Float, *>,
 ) {
@@ -393,16 +394,11 @@ fun HighlightedText(
 @Composable
 fun CommentaryPopUp(isPopupVisible: Boolean, explanation: String, modifier: Modifier) {
     AnimatedVisibility(
-        visible = isPopupVisible,
-        enter = slideInVertically(
-            initialOffsetY = { it },
-            animationSpec = tween(durationMillis = 500)
-        ),
-        exit = slideOutVertically(
-            targetOffsetY = { it },
-            animationSpec = tween(durationMillis = 500)
-        ),
-        modifier = modifier
+        visible = isPopupVisible, enter = slideInVertically(
+            initialOffsetY = { it }, animationSpec = tween(durationMillis = 500)
+        ), exit = slideOutVertically(
+            targetOffsetY = { it }, animationSpec = tween(durationMillis = 500)
+        ), modifier = modifier
     ) {
         Box(
             modifier = Modifier
