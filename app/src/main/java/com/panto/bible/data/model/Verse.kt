@@ -8,11 +8,12 @@ data class Verse(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val book: Int,
     val chapter: Int,
-    val page: Int,
     val verse: Int,
     val verseNumber: String,
     val textOriginal: String,
     val textRaw: String,
     val commentary: String?,
     val subTitle: String?,
+    val page: Int,
+    val searcher: String
 )

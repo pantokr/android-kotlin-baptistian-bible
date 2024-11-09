@@ -3,6 +3,11 @@ package com.panto.bible.presentation.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.panto.bible.data.local.BibleConstant.BOOK_LIST_ENG
+import com.panto.bible.data.local.BibleConstant.BOOK_LIST_ENG_SHORT
+import com.panto.bible.data.local.BibleConstant.BOOK_LIST_KOR
+import com.panto.bible.data.local.BibleConstant.BOOK_LIST_KOR_SHORT
+import com.panto.bible.data.local.BibleConstant.LANGUAGE_LIST
 import com.panto.bible.data.local.BibleConstant.TAG
 import com.panto.bible.data.local.BibleConstant.VERSE_COUNT_LIST
 import com.panto.bible.data.local.BibleConstant.VERSION_LIST
@@ -44,29 +49,37 @@ class MainViewModel(
     val currentPage = _currentPage.asStateFlow()
 
     private val _currentVersion = MutableStateFlow(preferenceManager.currentVersion)
-    val currentVersion = _currentVersion
+    val currentVersion = _currentVersion.asStateFlow()
 
+    private val _currentBookList = MutableStateFlow(BOOK_LIST_KOR)
+    val currentBookList = _currentBookList.asStateFlow()
+
+    private val _currentBookShortList = MutableStateFlow(BOOK_LIST_KOR_SHORT)
+    val currentBookShortList = _currentBookShortList.asStateFlow()
 
     init {
+        _currentBookList.value =
+            if (LANGUAGE_LIST[0].contains(_currentVersion.value)) BOOK_LIST_KOR else BOOK_LIST_ENG
+        _currentBookShortList.value =
+            if (LANGUAGE_LIST[0].contains(_currentVersion.value)) BOOK_LIST_KOR_SHORT else BOOK_LIST_ENG_SHORT
         viewModelScope.launch {
             loadVerses()
         }
     }
 
-    fun getVerses(book: Int, chapter: Int) {
+    fun getVersesByBookChapter(book: Int, chapter: Int) {
         viewModelScope.launch {
             val verses =
-                verseLocalDataSource.getVerses(currentVersion.value ?: "han", book, chapter)
+                verseLocalDataSource.getVersesByBookAndChapter(_currentVersion.value, book, chapter)
             _verses.value = verses
             preferenceManager.currentPage = verses[0].page
         }
     }
 
-
     fun getVersesByPage(page: Int) {
         viewModelScope.launch {
             _currentPage.value = page
-            val verses = verseLocalDataSource.getVersesByPage(currentVersion.value ?: "han", page)
+            val verses = verseLocalDataSource.getVersesByPage(_currentVersion.value, page)
             _verses.value = verses
             preferenceManager.currentPage = page
         }
@@ -79,9 +92,9 @@ class MainViewModel(
 
         viewModelScope.launch {
             if (_searchQuery.value.length >= 2) {
-                val filteredVerses =
-                    verseLocalDataSource.searchVerses(currentVersion.value ?: "han", query)
-                _searchedVerses.value = filteredVerses
+                _searchedVerses.value =
+                    verseLocalDataSource.searchVerses(_currentVersion.value, query)
+
             } else if (_searchQuery.value.isBlank()) {
                 _searchedVerses.value = listOf()
             }
@@ -104,10 +117,7 @@ class MainViewModel(
                 }
 
                 verseLocalDataSource.insertSearchHistory(
-                    time = currentTime,
-                    page = page,
-                    verse = verse,
-                    query = query
+                    time = currentTime, page = page, verse = verse, query = query
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "검색 기록 추가 실패: ${e.message}")
@@ -125,9 +135,7 @@ class MainViewModel(
                 val verseList = mutableListOf<Verse>()
                 searchHistories.forEach { history ->
                     val verse = verseLocalDataSource.getVerseByPageAndVerse(
-                        version = _currentVersion.value ?: "han",
-                        page = history.page,
-                        verse = history.verse
+                        version = _currentVersion.value, page = history.page, verse = history.verse
                     )
                     queryList.add(history.query)
                     verseList.add(verse)
@@ -144,14 +152,16 @@ class MainViewModel(
     private suspend fun loadVerses() {
         viewModelScope.launch {
             for (version in VERSION_LIST) {
-                if (verseLocalDataSource.getVersesCount(version) == 0) {
-                    verseLocalDataSource.loadVersesFromCSV("${version}.csv", version)
+                if (verseLocalDataSource.getVersesCount(VERSION_LIST.indexOf(version)) == 0) {
+                    verseLocalDataSource.loadVersesFromCSV(
+                        "${version}.csv", VERSION_LIST.indexOf(version)
+                    )
                 }
             }
             while (true) {
                 var currentCount = 0
                 for (version in VERSION_LIST) {
-                    currentCount += verseLocalDataSource.getVersesCount(version)
+                    currentCount += verseLocalDataSource.getVersesCount(VERSION_LIST.indexOf(version))
                 }
                 if (currentCount >= VERSE_COUNT_LIST.sum()) {
                     Log.d(TAG, "모든 구절 로드 완료")
