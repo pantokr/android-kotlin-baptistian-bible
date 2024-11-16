@@ -11,7 +11,8 @@ import com.panto.bible.data.local.BibleConstant.BOOK_LIST_KOR_SHORT
 import com.panto.bible.data.local.BibleConstant.LANGUAGE_LIST
 import com.panto.bible.data.local.BibleConstant.TAG
 import com.panto.bible.data.local.BibleConstant.VERSION_LIST
-import com.panto.bible.data.model.SearchHistory
+import com.panto.bible.data.model.History
+import com.panto.bible.data.model.Save
 import com.panto.bible.data.model.Verse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,7 +23,7 @@ class VerseLocalDataSource(private val context: Context) {
 
     suspend fun loadVersesFromCSV(fileName: String, version: Int): Boolean =
         withContext(Dispatchers.IO) {
-            val database = VerseDatabase.getDatabase(context, VERSION_LIST[version])
+            val database = BibleDatabase.getDatabase(context, VERSION_LIST[version])
             val verseDao = database.verseDao()
 
             val verseList = mutableListOf<Verse>()
@@ -70,40 +71,42 @@ class VerseLocalDataSource(private val context: Context) {
 
     suspend fun getVerseByPageAndVerse(version: Int, page: Int, verse: Int): Verse =
         withContext(Dispatchers.IO) {
-            val database = VerseDatabase.getDatabase(context, VERSION_LIST[version])
+            val database = BibleDatabase.getDatabase(context, VERSION_LIST[version])
             val verseDao = database.verseDao()
             verseDao.getVerseByPageAndVerse(page, verse)
         }
 
-    suspend fun getVersesByBookAndChapter(version: Int, book: Int, chapter: Int): List<Verse> =
-        withContext(Dispatchers.IO) {
-            val database = VerseDatabase.getDatabase(context, VERSION_LIST[version])
-            val verseDao = database.verseDao()
-            verseDao.getVersesByBookAndChapter(book, chapter)
-        }
-
     suspend fun getVersesByPage(version: Int, page: Int): List<Verse> =
         withContext(Dispatchers.IO) {
-            val database = VerseDatabase.getDatabase(context, VERSION_LIST[version])
-            val verseDao = database.verseDao()
-            verseDao.getVersesByPage(page)
+            if (version == -1) {
+                listOf<Verse>()
+            } else {
+                val database = BibleDatabase.getDatabase(context, VERSION_LIST[version])
+                val verseDao = database.verseDao()
+                verseDao.getVersesByPage(page)
+            }
         }
 
-    suspend fun getAllVerses(version: Int): List<Verse> = withContext(Dispatchers.IO) {
-        val database = VerseDatabase.getDatabase(context, VERSION_LIST[version])
-        val verseDao = database.verseDao()
-        verseDao.getAllVerses()
-    }
+    suspend fun getVersesByBookAndChapter(version: Int, book: Int, chapter: Int): List<Verse> =
+        withContext(Dispatchers.IO) {
+            if (version == -1) {
+                listOf<Verse>()
+            } else {
+                val database = BibleDatabase.getDatabase(context, VERSION_LIST[version])
+                val verseDao = database.verseDao()
+                verseDao.getVersesByBookAndChapter(book, chapter)
+            }
+        }
 
     suspend fun getVersesCount(version: Int): Int = withContext(Dispatchers.IO) {
-        val database = VerseDatabase.getDatabase(context, VERSION_LIST[version])
+        val database = BibleDatabase.getDatabase(context, VERSION_LIST[version])
         val verseDao = database.verseDao()
         verseDao.getVersesCount()
     }
 
     suspend fun searchVerses(version: Int, query: String): List<Verse> =
         withContext(Dispatchers.IO) {
-            val database = VerseDatabase.getDatabase(context, VERSION_LIST[version])
+            val database = BibleDatabase.getDatabase(context, VERSION_LIST[version])
             val verseDao = database.verseDao()
 
             val queries = query.split(" ")
@@ -117,38 +120,66 @@ class VerseLocalDataSource(private val context: Context) {
             verseDao.searchVerses(dynamicQuery)
         }
 
-    suspend fun insertSearchHistory(time: Int, page: Int, verse: Int, query: String) =
+    suspend fun insertHistory(time: Int, page: Int, verse: Int, query: String) =
         withContext(Dispatchers.IO) {
-            val database = VerseDatabase.getDatabase(context, "history")
-            val searchHistoryDao = database.searchHistoryDao()
+            val database = BibleDatabase.getDatabase(context, "history")
+            val historyDao = database.historyDao()
 
-            val searchHistory = SearchHistory(
+            val history = History(
                 time = time, page = page, verse = verse, query = query
             )
 
-            searchHistoryDao.insertSearchHistory(searchHistory)
+            historyDao.insertHistory(history)
         }
 
-    suspend fun deleteSearchHistory(page: Int, verse: Int, query: String) {
+    suspend fun getRecentHistories(): List<History> = withContext(Dispatchers.IO) {
+        val database = BibleDatabase.getDatabase(context, "history")
+        val historyDao = database.historyDao()
+        historyDao.getRecentHistories()
+    }
+
+    suspend fun deleteHistoryByQuery(verse: Verse, query: String) {
         withContext(Dispatchers.IO) {
-            val database = VerseDatabase.getDatabase(context, "history")
-            val searchHistoryDao = database.searchHistoryDao()
-            searchHistoryDao.deleteSearchHistory(page, verse, query)
+            val database = BibleDatabase.getDatabase(context, "history")
+            val historyDao = database.historyDao()
+            historyDao.deleteHistoryByQuery(verse.page, verse.verse, query)
         }
     }
 
-    suspend fun isSearchHistoryExist(page: Int, verse: Int, query: String): Boolean {
-        return withContext(Dispatchers.IO) {
-            val database = VerseDatabase.getDatabase(context, "history")
-            val searchHistoryDao = database.searchHistoryDao()
-            val result = searchHistoryDao.isSearchHistoryExist(page, verse, query)
-            result > 0
-        }
+    suspend fun deleteAllHistory() = withContext(Dispatchers.IO) {
+        val database = BibleDatabase.getDatabase(context, "history")
+        val historyDao = database.historyDao()
+        historyDao.deleteAllHistory()
     }
 
-    suspend fun getRecentSearchHistories(): List<SearchHistory> = withContext(Dispatchers.IO) {
-        val database = VerseDatabase.getDatabase(context, "history")
-        val searchHistoryDao = database.searchHistoryDao()
-        searchHistoryDao.getRecentSearchHistories()
+    suspend fun insertSave(time: Int, page: Int, verse: Int, color: Int) =
+        withContext(Dispatchers.IO) {
+            val database = BibleDatabase.getDatabase(context, "save")
+            val saveDao = database.saveDao()
+
+            val save = Save(
+                time = time, page = page, verse = verse, color = color
+            )
+            saveDao.insertSave(save)
+        }
+
+    suspend fun getSavesByPage(page: Int): List<Save> = withContext(Dispatchers.IO) {
+        val database = BibleDatabase.getDatabase(context, "save")
+        val saveDao = database.saveDao()
+        saveDao.getSavesByPage(page)
+    }
+
+    suspend fun getAllSaves(): List<Save> = withContext(Dispatchers.IO) {
+        val database = BibleDatabase.getDatabase(context, "save")
+        val saveDao = database.saveDao()
+        saveDao.getAllSaves()
+    }
+
+    suspend fun deleteSaves(page: Int, verse: Int) {
+        withContext(Dispatchers.IO) {
+            val database = BibleDatabase.getDatabase(context, "save")
+            val saveDao = database.saveDao()
+            saveDao.deleteSaves(page, verse)
+        }
     }
 }

@@ -18,8 +18,11 @@ class SettingsViewModel(
     private val _fontFamily = MutableStateFlow(preferenceManager.fontFamily)
     val fontFamily = _fontFamily.asStateFlow()
 
-    private val _isDarkModeEnabled = MutableStateFlow(preferenceManager.isDarkModeEnabled)
-    val isDarkModeEnabled = _isDarkModeEnabled.asStateFlow()
+    private val _themeMode = MutableStateFlow(preferenceManager.themeMode)
+    val themeMode = _themeMode.asStateFlow()
+
+    private val _saveColor = MutableStateFlow(preferenceManager.saveColor)
+    val saveColor = _saveColor.asStateFlow()
 
     fun updateFontSize(fontSize: Float) {
         _fontSize.value = fontSize
@@ -37,8 +40,13 @@ class SettingsViewModel(
 
     }
 
-    fun toggleDarkMode(isEnabled: Boolean) {
-        _isDarkModeEnabled.value = isEnabled
-        preferenceManager.isDarkModeEnabled = isEnabled
+    fun updateThemeMode(themeMode: Int) {
+        _themeMode.value = themeMode
+        preferenceManager.themeMode = themeMode
+    }
+
+    fun updateSaveColor(color: Int) {
+        _saveColor.value = color
+        preferenceManager.saveColor = color
     }
 }

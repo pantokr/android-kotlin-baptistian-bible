@@ -13,9 +13,9 @@ import androidx.compose.ui.unit.sp
 
 val Typography = Typography(
     bodyLarge = TextStyle(
-        fontSize = 16.sp,  // 기본 폰트 크기
-        lineHeight = 24.sp,  // 줄 간격
-        letterSpacing = 0.5.sp,  // 문자 간격
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.5.sp,
         fontWeight = FontWeight.Normal
     ),
     bodyMedium = TextStyle(
@@ -51,35 +51,49 @@ val Typography = Typography(
 )
 
 val DarkColors = darkColorScheme(
-    primary = Color(0xFF3B2A16),
-    onPrimary = Color(0xFFEAE2D5),
-    secondary = Color(0xFF6F4C3E),
-    onSecondary = Color(0xFFEAE2D5),
-    background = Color(0xFF1F1F1F),
-    onBackground = Color(0xFFEAE2D5),
-    surface = Color(0xFF2D2D2D),
-    onSurface = Color(0xFFEAE2D5)
+    primary = Color(0xFF484848),
+    onPrimary = Color(0xFFEAEAEA),
+    secondary = Color(0xFF606060),
+    onSecondary = Color(0xFFEAEAEA),
+    tertiary = Color(0xFF606060),
+    onTertiary = Color(0xFFEAEAEA),
+    background = Color(0xFF181818),
+    onBackground = Color(0xFFEAEAEA),
+    surface = Color(0xFF303030),
+    onSurface = Color(0xFFEAEAEA)
 )
 
 
 val LightColors = lightColorScheme(
-    primary = Color(0xFFD9CBAE),
+    primary = Color(0xFFFCD0A1),
     onPrimary = Color(0xFF1F1F1F),
-    secondary = Color(0xFFEAE2D5),
+    secondary = Color(0xFFAFD2E9),
     onSecondary = Color(0xFF1F1F1F),
-    background = Color(0xFFF7F2E7),
+    tertiary = Color(0xFFA690A4),
+    onTertiary = Color(0xFF1F1F1F),
+    background = Color(0xFFFCFCFC),
     onBackground = Color(0xFF1F1F1F),
-    surface = Color(0xFFE5DCC5),
+    surface = Color(0xFFFCFCFC),
     onSurface = Color(0xFF1F1F1F)
 )
 
 
 @Composable
 fun BibleTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: Int,
     content: @Composable () -> Unit
 ) {
-    val colors = if (darkTheme) DarkColors else LightColors
+    val isDarkMode = when (themeMode) {
+        0 -> false // Light
+        1 -> true  // Dark
+        else -> isSystemInDarkTheme() // System
+    }
+
+    val colors = if (isDarkMode) {
+        DarkColors
+    } else {
+        LightColors
+    }
 
     MaterialTheme(
         colorScheme = colors,

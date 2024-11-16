@@ -1,7 +1,7 @@
 [versions]
 accompanistPager = "<latest_version>"
 activityCompose = "1.9.3"
-agp = "8.5.2"
+agp = "8.7.2"
 kotlin = "1.9.10"
 junit = "4.13.2"
 junitVersion = "1.2.1"

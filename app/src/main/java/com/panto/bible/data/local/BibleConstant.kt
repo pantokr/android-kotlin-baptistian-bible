@@ -1,5 +1,8 @@
 package com.panto.bible.data.local
 
+import androidx.compose.ui.graphics.Color
+import com.panto.bible.data.model.BibleDifferenceReference
+
 object BibleConstant {
     val TAG: String = "BIBLE-LOG"
 
@@ -72,10 +75,11 @@ object BibleConstant {
         "베드로후서",
         "요한1서",
         "요한2서",
-        "요한2서",
+        "요한3서",
         "유다서",
         "요한계시록"
     )
+
     val BOOK_LIST_KOR_SHORT = arrayOf(
         "창",
         "출",
@@ -144,6 +148,7 @@ object BibleConstant {
         "유",
         "계"
     )
+
     val BOOK_LIST_ENG = arrayOf(
         "Genesis",  // 창세기
         "Exodus",   // 출애굽기
@@ -212,6 +217,7 @@ object BibleConstant {
         "Jude",       // 유다서
         "Revelation"  // 요한계시록
     )
+
     val BOOK_LIST_ENG_SHORT = arrayOf(
         "Gen",  // 창세기
         "Exo",  // 출애굽기
@@ -300,5 +306,27 @@ object BibleConstant {
         957, 973, 997, 1018, 1046, 1062, 1078, 1091, 1097, 1103,
         1107, 1111, 1116, 1119, 1125, 1129, 1132, 1133,
         1146, 1151, 1156, 1159, 1164, 1165, 1166, 1167
+    )
+
+    val SAVE_COLORS = arrayOf(
+        Color(0xFFEA3323),
+        Color(0xFFFFBF00),
+        Color(0xFF75FB4C),
+        Color(0xFF69ABFF),
+    )
+
+    val HAN_GAE_DIFFERENCE_REFERENCE = arrayOf(
+        // -1 -> HAN+1, 1 -> GAE+1
+        BibleDifferenceReference(book = 5, chapter = 1, verse = 11, offset = 1),
+        BibleDifferenceReference(book = 8, chapter = 29, verse = 29, offset = 1),
+        BibleDifferenceReference(book = 17, chapter = 30, verse = 32, offset = 1),
+        BibleDifferenceReference(book = 17, chapter = 34, verse = 9, offset = 1),
+        BibleDifferenceReference(book = 21, chapter = 5, verse = 12, offset = -1),
+        BibleDifferenceReference(book = 22, chapter = 6, verse = 7, offset = 1),
+        BibleDifferenceReference(book = 22, chapter = 29, verse = 0, offset = 1),
+        BibleDifferenceReference(book = 22, chapter = 47, verse = 0, offset = 1),
+        BibleDifferenceReference(book = 23, chapter = 20, verse = 0, offset = 1),
+        BibleDifferenceReference(book = 25, chapter = 24, verse = 1, offset = 1),
+        BibleDifferenceReference(book = 43, chapter = 23, verse = 6, offset = -1),
     )
 }

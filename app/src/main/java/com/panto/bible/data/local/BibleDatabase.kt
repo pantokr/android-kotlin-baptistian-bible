@@ -4,23 +4,30 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.panto.bible.data.model.SearchHistory
+import com.panto.bible.data.model.History
+import com.panto.bible.data.model.Save
 import com.panto.bible.data.model.Verse
 
-@Database(entities = [Verse::class, SearchHistory::class], version = 1, exportSchema = false)
-abstract class VerseDatabase : RoomDatabase() {
+@Database(
+    entities = [Verse::class, History::class, Save::class],
+    version = 1,
+    exportSchema = false
+)
+abstract class BibleDatabase : RoomDatabase() {
     abstract fun verseDao(): VerseDao
-    abstract fun searchHistoryDao(): SearchHistoryDao
+    abstract fun historyDao(): HistoryDao
+    abstract fun saveDao(): SaveDao
 
     companion object {
         @Volatile
-        private var instances = mutableMapOf<String, VerseDatabase?>()
+        private var instances = mutableMapOf<String, BibleDatabase?>()
 
-        fun getDatabase(context: Context, version: String): VerseDatabase {
+        fun getDatabase(context: Context, version: String): BibleDatabase {
             val dbName = when (version) {
                 "han" -> "han_database.db"
                 "gae" -> "gae_database.db"
                 "history" -> "history_database.db"
+                "save" -> "save_database.db"
                 else -> "default_database.db"
             }
 
@@ -28,7 +35,7 @@ abstract class VerseDatabase : RoomDatabase() {
                 synchronized(this) {
                     Room.databaseBuilder(
                         context.applicationContext,
-                        VerseDatabase::class.java,
+                        BibleDatabase::class.java,
                         dbName
                     )
                         .fallbackToDestructiveMigration()

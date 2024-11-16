@@ -16,8 +16,10 @@ import androidx.navigation.compose.rememberNavController
 import com.panto.bible.data.local.PreferenceManager
 import com.panto.bible.data.local.VerseLocalDataSource
 import com.panto.bible.presentation.ui.screen.SearchScreen
+import com.panto.bible.presentation.ui.screen.SettingsScreen
 import com.panto.bible.presentation.ui.screen.SplashScreen
 import com.panto.bible.presentation.ui.screen.VerseScreen
+import com.panto.bible.presentation.ui.screen.VersionScreen
 import com.panto.bible.presentation.ui.viewmodel.MainViewModel
 import com.panto.bible.presentation.ui.viewmodel.MainViewModelFactory
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
@@ -33,11 +35,10 @@ class MainActivity : ComponentActivity() {
         //  deleteDatabase("han_database.db")
         //  deleteDatabase("han_database.db")
         //  deleteDatabase("default_database.db")
-
         super.onCreate(savedInstanceState)
 
-        // WindowCompat.setDecorFitsSystemWindows(window, false)
         actionBar?.hide()
+        // WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val verseLocalDataSource = VerseLocalDataSource(applicationContext)
         val preferenceManager = PreferenceManager(applicationContext)
@@ -46,8 +47,10 @@ class MainActivity : ComponentActivity() {
 
         mainViewModel = viewModels<MainViewModel> { mainViewModelFactory }.value
         settingsViewModel = viewModels<SettingsViewModel> { settingsViewModelFactory }.value
+
         setContent {
-            BibleTheme {
+            val themeMode = settingsViewModel.themeMode.collectAsState()
+            BibleTheme(themeMode = themeMode.value) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -66,8 +69,22 @@ class MainActivity : ComponentActivity() {
                                     navController
                                 )
                             }
+                            composable("settingsScreen") {
+                                SettingsScreen(
+                                    mainViewModel,
+                                    settingsViewModel,
+                                    navController
+                                )
+                            }
                             composable("searchScreen") {
                                 SearchScreen(
+                                    mainViewModel,
+                                    settingsViewModel,
+                                    navController
+                                )
+                            }
+                            composable("versionScreen") {
+                                VersionScreen(
                                     mainViewModel,
                                     settingsViewModel,
                                     navController

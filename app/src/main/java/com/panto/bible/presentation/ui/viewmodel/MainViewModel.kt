@@ -7,12 +7,14 @@ import com.panto.bible.data.local.BibleConstant.BOOK_LIST_ENG
 import com.panto.bible.data.local.BibleConstant.BOOK_LIST_ENG_SHORT
 import com.panto.bible.data.local.BibleConstant.BOOK_LIST_KOR
 import com.panto.bible.data.local.BibleConstant.BOOK_LIST_KOR_SHORT
+import com.panto.bible.data.local.BibleConstant.HAN_GAE_DIFFERENCE_REFERENCE
 import com.panto.bible.data.local.BibleConstant.LANGUAGE_LIST
 import com.panto.bible.data.local.BibleConstant.TAG
 import com.panto.bible.data.local.BibleConstant.VERSE_COUNT_LIST
 import com.panto.bible.data.local.BibleConstant.VERSION_LIST
 import com.panto.bible.data.local.PreferenceManager
 import com.panto.bible.data.local.VerseLocalDataSource
+import com.panto.bible.data.model.Save
 import com.panto.bible.data.model.Verse
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,8 +29,17 @@ class MainViewModel(
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _currentVersion = MutableStateFlow(preferenceManager.currentVersion)
+    val currentVersion = _currentVersion.asStateFlow()
+
+    private val _currentSubVersion = MutableStateFlow(preferenceManager.currentSubVersion)
+    val currentSubVersion = _currentSubVersion.asStateFlow()
+
     private val _verses = MutableStateFlow<List<Verse>>(emptyList())
     val verses = _verses.asStateFlow()
+
+    val _subVerses = MutableStateFlow<List<String>>(emptyList())
+    val subVerses = _subVerses.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -45,11 +56,11 @@ class MainViewModel(
     private val _historyVerses = MutableStateFlow<List<Verse>>(emptyList())
     val historyVerses = _historyVerses.asStateFlow()
 
+    private val _saved = MutableStateFlow<List<Save>>(emptyList())
+    val saved = _saved.asStateFlow()
+
     private val _currentPage = MutableStateFlow(preferenceManager.currentPage)
     val currentPage = _currentPage.asStateFlow()
-
-    private val _currentVersion = MutableStateFlow(preferenceManager.currentVersion)
-    val currentVersion = _currentVersion.asStateFlow()
 
     private val _currentBookList = MutableStateFlow(BOOK_LIST_KOR)
     val currentBookList = _currentBookList.asStateFlow()
@@ -67,21 +78,61 @@ class MainViewModel(
         }
     }
 
-    fun getVersesByBookChapter(book: Int, chapter: Int) {
-        viewModelScope.launch {
-            val verses =
-                verseLocalDataSource.getVersesByBookAndChapter(_currentVersion.value, book, chapter)
-            _verses.value = verses
-            preferenceManager.currentPage = verses[0].page
+    fun updateVersion(version: Int) {
+        _currentVersion.value = version
+        preferenceManager.currentVersion = version
+
+        if (_currentSubVersion.value == version) {
+            updateSubVersion(-1)
         }
+        getVersesByPage(_currentPage.value)
+    }
+
+    fun updateSubVersion(subVersion: Int) {
+        _currentSubVersion.value = subVersion
+        preferenceManager.currentSubVersion = subVersion
+
+        _subVerses.value = listOf()
+        getSubVersesByPage(_currentPage.value)
     }
 
     fun getVersesByPage(page: Int) {
         viewModelScope.launch {
-            _currentPage.value = page
             val verses = verseLocalDataSource.getVersesByPage(_currentVersion.value, page)
             _verses.value = verses
+
+            _currentPage.value = page
             preferenceManager.currentPage = page
+
+            getSubVersesByPage(page)
+            getSavesByPage(page)
+        }
+    }
+
+
+    fun getVersesByBookAndChapter(book: Int, chapter: Int) {
+        viewModelScope.launch {
+            val verses =
+                verseLocalDataSource.getVersesByBookAndChapter(_currentVersion.value, book, chapter)
+            _verses.value = verses
+
+            val p = verses[0].page
+            _currentPage.value = p
+            preferenceManager.currentPage = p
+
+            getSubVersesByPage(p)
+            getSavesByPage(p)
+        }
+    }
+
+    fun getSubVersesByPage(page: Int) {
+        viewModelScope.launch {
+            if (_currentSubVersion.value != -1) {
+                val verses = verseLocalDataSource.getVersesByPage(_currentSubVersion.value, page)
+                _subVerses.value = verses.map { it.textRaw }
+
+                handleBibleVersionDifference()
+            }
         }
     }
 
@@ -105,19 +156,14 @@ class MainViewModel(
         _selectedVerse.value = index
     }
 
-    fun addHistory(page: Int, verse: Int, query: String) {
+    fun insertHistory(verse: Verse, query: String) {
         viewModelScope.launch {
             try {
                 val currentTime = System.currentTimeMillis().toInt()
+                verseLocalDataSource.deleteHistoryByQuery(verse, query)
 
-                val isExist = verseLocalDataSource.isSearchHistoryExist(page, verse, query)
-
-                if (isExist) {
-                    verseLocalDataSource.deleteSearchHistory(page, verse, query)
-                }
-
-                verseLocalDataSource.insertSearchHistory(
-                    time = currentTime, page = page, verse = verse, query = query
+                verseLocalDataSource.insertHistory(
+                    time = currentTime, page = verse.page, verse = verse.verse, query = query
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "검색 기록 추가 실패: ${e.message}")
@@ -129,7 +175,7 @@ class MainViewModel(
     fun getHistories() {
         viewModelScope.launch {
             try {
-                val searchHistories = verseLocalDataSource.getRecentSearchHistories()
+                val searchHistories = verseLocalDataSource.getRecentHistories()
 
                 val queryList = mutableListOf<String>()
                 val verseList = mutableListOf<Verse>()
@@ -149,7 +195,57 @@ class MainViewModel(
         }
     }
 
-    private suspend fun loadVerses() {
+    fun deleteHistory(verse: Verse, query: String) {
+        viewModelScope.launch {
+            verseLocalDataSource.deleteHistoryByQuery(verse, query)
+            getHistories()
+        }
+    }
+
+    fun deleteAllHistory() {
+        viewModelScope.launch {
+            verseLocalDataSource.deleteAllHistory()
+            getHistories()
+        }
+    }
+
+    fun insertSave(verse: Verse, color: Int) {
+        viewModelScope.launch {
+            if (color == -1) {
+                verseLocalDataSource.deleteSaves(verse.page, verse.verse)
+            } else {
+                try {
+                    val currentTime = System.currentTimeMillis().toInt()
+                    verseLocalDataSource.deleteSaves(verse.page, verse.verse)
+
+                    verseLocalDataSource.insertSave(
+                        time = currentTime, page = verse.page, verse = verse.verse, color = color
+                    )
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "저장 추가 실패: ${e.message}")
+                }
+            }
+
+            getSavesByPage(_currentPage.value)
+        }
+    }
+
+    fun getSavesByPage(page: Int) {
+        viewModelScope.launch {
+            val saves = verseLocalDataSource.getSavesByPage(page)
+            _saved.value = saves
+        }
+    }
+
+    fun getAllSavesGroupedByTime() {
+        viewModelScope.launch {
+            val saves = verseLocalDataSource.getAllSaves()
+            saves.groupBy { it.time }.values.toList()
+        }
+    }
+
+    private fun loadVerses() {
         viewModelScope.launch {
             for (version in VERSION_LIST) {
                 if (verseLocalDataSource.getVersesCount(VERSION_LIST.indexOf(version)) == 0) {
@@ -177,8 +273,46 @@ class MainViewModel(
                 }
                 delay(500)
             }
+            Log.d(TAG, "구절 출력 준비 완료")
 
             _isLoading.value = false
         }
     }
+
+    private fun handleBibleVersionDifference() {
+        val bVersion = _currentVersion.value
+        val sVersion = _currentSubVersion.value
+
+        val bIndex = _verses.value[0].book
+        val cIndex = _verses.value[0].chapter
+
+        var cur_ref = HAN_GAE_DIFFERENCE_REFERENCE.toMutableList()
+        if (bVersion == 0 && sVersion == 1) {
+            cur_ref = HAN_GAE_DIFFERENCE_REFERENCE.toMutableList()
+        } else if (bVersion == 1 && sVersion == 0) {
+            cur_ref = HAN_GAE_DIFFERENCE_REFERENCE.map {
+                it.copy(offset = it.offset * -1)
+            }.toMutableList()
+        }
+
+        val result = cur_ref.filter { it.book == bIndex && it.chapter == cIndex }
+        result.forEach {
+            val offset = it.offset
+            val verse = it.verse
+            if (offset == 1) {
+                _subVerses.value =
+                    _subVerses.value.take(verse) + (_subVerses.value[verse] + " " + _subVerses.value[verse + 1]) + _subVerses.value.drop(
+                        verse + 2
+                    )
+
+            } else {
+                _subVerses.value = _subVerses.value.toMutableList().apply {
+                    if (verse + 1 in 0..size) {
+                        add(verse + 1, "(없거나 이전 절에 포함됨)")
+                    }
+                }
+            }
+        }
+    }
 }
+

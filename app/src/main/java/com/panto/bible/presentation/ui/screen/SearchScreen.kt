@@ -1,9 +1,14 @@
 package com.panto.bible.presentation.ui.screen
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,8 +27,10 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +38,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,13 +45,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,7 +66,6 @@ import com.panto.bible.data.local.BibleConstant.BOOK_CHAPTER_COUNT_LIST
 import com.panto.bible.data.model.Verse
 import com.panto.bible.presentation.ui.viewmodel.MainViewModel
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
-import com.panto.bible.ui.ThemedIcon
 import com.panto.bible.ui.ThemedIconButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -76,7 +86,9 @@ fun SearchScreen(
     val historyVerses by mainViewModel.historyVerses.collectAsState()
     val historyQueries by mainViewModel.historyQueries.collectAsState()
 
-    val isLeftExpanded = remember { mutableStateOf(true) }
+    val focusRequester = remember { FocusRequester() }
+
+    var isHistoryExpanded by remember { mutableStateOf(false) }
 
     val findingListState = rememberLazyListState()
     val searchedListState = rememberLazyListState()
@@ -88,279 +100,308 @@ fun SearchScreen(
     val bookKeys = groupedVerses.keys.toList()
     val bookValues = groupedVerses.values.toList()
 
+
+    BackHandler {
+        if (isHistoryExpanded) {
+            isHistoryExpanded = false
+        } else {
+            navController.navigate("VerseScreen") {
+                popUpTo(navController.graph.id) {
+                    inclusive = true
+                }
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         mainViewModel.searchVerses("")
         mainViewModel.getHistories()
+        // focusRequester.requestFocus()
         findingListState.scrollToItem(
             max(
-                0,
-                selectedBook.intValue - findingListState.layoutInfo.visibleItemsInfo.size / 2
+                0, selectedBook.intValue - findingListState.layoutInfo.visibleItemsInfo.size / 2
             )
         )
     }
 
-    val leftColumnWeight by animateFloatAsState(targetValue = if (isLeftExpanded.value) 0.8f else 0.2f)
-    var dragOffsetX by remember { mutableFloatStateOf(0f) }
-
-    Column(
+    Box(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        SearchField(onSearchChanged = { query -> mainViewModel.searchVerses(query) },
-            onMenuClick = {})
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .pointerInput(Unit) {
-                    detectDragGestures(onDragEnd = {
-                        if (dragOffsetX > 100) {
-                            isLeftExpanded.value = true
-                        } else if (dragOffsetX < -100) {
-                            isLeftExpanded.value = false
+        Column {
+            // AppBar(onCloseClick = { navController.popBackStack() })
+            SearchField(
+                focusRequester = focusRequester,
+                onBackClick = {
+                    navController.navigate("VerseScreen") {
+                        popUpTo(navController.graph.id) {
+                            inclusive = true
                         }
-                        dragOffsetX = 0f
-                    }, onDrag = { _, dragAmount ->
-                        dragOffsetX += dragAmount.x
-                    })
-                }
-        ) {
-            Box(modifier = Modifier
-                .weight(leftColumnWeight)
-                .fillMaxHeight()
-                .background(
-                    MaterialTheme.colorScheme.secondary, shape = RoundedCornerShape(8.dp)
-                )
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }) {
-                    isLeftExpanded.value = true
-                }) {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
+                    }
+                },
+                onSearchChanged = { query ->
+                    mainViewModel.searchVerses(query)
+                })
+
+            HorizontalDivider(
+                modifier = Modifier
+                    .height(2.dp)
+                    .background(color = Color.Gray.copy(alpha = 0.5f)),
+            )
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .background(
+                            MaterialTheme.colorScheme.background, shape = RoundedCornerShape(8.dp)
+                        )
                 ) {
-                    if (isLeftExpanded.value) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "Search",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         if (searchQuery.length < 2) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(8.dp),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = "검색 시 2자 이상 입력해 주세요",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                            }
-                            FindingGrid(
-                                currentBookList = currentBookList,
+                            FindingGrid(currentBookList = currentBookList,
                                 selectedBook = selectedBook,
                                 findingListState = findingListState,
                                 onGridClick = { book, chapter ->
-                                    navController.navigate(
-                                        "VerseScreen"
-                                    ) {
-                                        mainViewModel.getVersesByBookChapter(book, chapter)
-                                    }
-                                }
-                            )
-                        } else {
-                            Text(
-                                "",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            SearchResult(currentBookList = currentBookList,
-                                currentBookShortList = currentBookShortList,
-                                searchQuery = searchQuery,
-                                bookKeys = bookKeys,
-                                bookValues = bookValues,
-                                searchedListState = searchedListState,
-                                coroutineScope = coroutineScope,
-                                onVerseClick = { page, verseIndex, query ->
                                     navController.navigate("VerseScreen") {
-                                        mainViewModel.addHistory(
-                                            page, verseIndex, query
-                                        )
-                                        mainViewModel.getVersesByPage(page)
-                                        mainViewModel.selectVerse(verseIndex)
+                                        popUpTo(navController.graph.id) {
+                                            inclusive = true
+                                        }
+                                        mainViewModel.getVersesByBookAndChapter(book, chapter)
                                     }
+                                })
+                        } else {
+                            if (bookKeys.isEmpty()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        "검색 결과가 없습니다",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
                                 }
-                            )
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
+                            }
 
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "S",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(8.dp)
+                            ) {
+
+                                SearchResult(currentBookList = currentBookList,
+                                    currentBookShortList = currentBookShortList,
+                                    searchQuery = searchQuery,
+                                    bookKeys = bookKeys,
+                                    bookValues = bookValues,
+                                    searchedListState = searchedListState,
+                                    coroutineScope = coroutineScope,
+                                    onVerseClick = { v, query ->
+                                        navController.navigate("VerseScreen") {
+                                            popUpTo(navController.graph.id) {
+                                                inclusive = true
+                                            }
+                                            mainViewModel.insertHistory(
+                                                v, query
+                                            )
+                                            mainViewModel.getVersesByPage(v.page)
+                                            mainViewModel.selectVerse(v.verse)
+                                        }
+                                    })
+                            }
                         }
                     }
                 }
-            }
 
-            Box(modifier = Modifier
-                .weight(1f - leftColumnWeight)
-                .fillMaxHeight()
-                .background(
-                    MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(8.dp)
-                )
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }) {
-                    isLeftExpanded.value = false
-                }) {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
+                this@Column.AnimatedVisibility(
+                    visible = isHistoryExpanded,
+                    enter = slideInVertically(
+                        initialOffsetY = { it }, animationSpec = tween(durationMillis = 500)
+                    ) + fadeIn(animationSpec = tween(durationMillis = 500)),
+                    exit = slideOutVertically(
+                        targetOffsetY = { it }, animationSpec = tween(durationMillis = 500)
+                    ) + fadeOut(animationSpec = tween(durationMillis = 500))
                 ) {
-                    if (!isLeftExpanded.value) {
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "Histories",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .background(
+                                MaterialTheme.colorScheme.secondary,
+                                shape = RoundedCornerShape(8.dp)
                             )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        LazyColumn(
-                            modifier = Modifier.fillMaxHeight()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(historyVerses.size) { index ->
-                                HistoryVerseItem(currentBookList = currentBookList,
-                                    verse = historyVerses[index],
-                                    query = historyQueries[index],
-                                    onVerseClick = { page, verse, query ->
-                                        navController.navigate(
-                                            "VerseScreen"
-                                        ) {
-                                            mainViewModel.addHistory(
-                                                page, verse, query
-                                            )
-                                            mainViewModel.getVersesByPage(page)
-                                            mainViewModel.selectVerse(verse)
-                                        }
+                            if (historyVerses.isEmpty()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        "검색 기록 결과가 없습니다",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(modifier = Modifier.clickable(indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }) {
+                                        mainViewModel.deleteAllHistory()
+                                    }) {
+                                        Text(
+                                            "기록",
+                                            style = MaterialTheme.typography.titleMedium,
+                                        )
                                     }
-                                )
-                            }
-                        }
 
-                    } else {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "H",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                                    Box(modifier = Modifier.clickable(indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }) {
+                                        mainViewModel.deleteAllHistory()
+                                    }) {
+                                        Text(
+                                            "전체삭제",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            textDecoration = TextDecoration.Underline
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            LazyColumn(
+                                modifier = Modifier.fillMaxHeight()
+                            ) {
+                                items(historyVerses.size) { index ->
+                                    HistoryVerseItem(currentBookList = currentBookList,
+                                        verse = historyVerses[index],
+                                        query = historyQueries[index],
+                                        onVerseClick = { v, query ->
+                                            navController.navigate(
+                                                "VerseScreen"
+                                            ) {
+                                                popUpTo(navController.graph.id) {
+                                                    inclusive = true
+                                                }
+                                                mainViewModel.insertHistory(
+                                                    v, query
+                                                )
+                                                mainViewModel.getVersesByPage(v.page)
+                                                mainViewModel.selectVerse(v.verse)
+                                            }
+                                        },
+                                        onDeleteVerseClick = { v, query ->
+                                            mainViewModel.deleteHistory(v, query)
+                                        })
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+
+
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            FloatingHistoryButton(isHistoryExpanded = isHistoryExpanded,
+                onHistoryButtonClick = { isHistoryExpanded = !isHistoryExpanded })
+        }
     }
 }
 
-
 @Composable
-fun SearchField(onSearchChanged: (String) -> Unit, onMenuClick: () -> Unit) {
+fun SearchField(
+    focusRequester: FocusRequester, onBackClick: () -> Unit, onSearchChanged: (String) -> Unit
+) {
     var query by remember { mutableStateOf("") }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .height(60.dp)
+            .height(60.dp), contentAlignment = Alignment.Center
+
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            ThemedIconButton(iconResLight = R.drawable.back_light,
+                iconResDark = R.drawable.back_dark,
+                modifier = Modifier.size(48.dp),
+                onClick = { onBackClick() })
+            Spacer(Modifier.width(12.dp))
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .shadow(4.dp, shape = RoundedCornerShape(4.dp))
-                    .background(
-                        MaterialTheme.colorScheme.background, shape = RoundedCornerShape(4.dp)
-                    )
+                modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart
             ) {
-                Row(
+                BasicTextField(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BasicTextField(value = query, onValueChange = { newText ->
-                        val reduced = newText.replace("\n", "")  // 줄바꿈 제거
+                        .fillMaxWidth(),
+//                        .focusRequester(focusRequester = focusRequester),
+                    value = query,
+                    onValueChange = { newText ->
+                        val reduced = newText.replace("\n", "")
                         query = reduced
                         onSearchChanged(reduced)
-                    }, decorationBox = { innerTextField ->
+                    },
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(value = MaterialTheme.colorScheme.onSurface),
+                    decorationBox = { innerTextField ->
                         if (query.isEmpty()) {
                             Text(
-                                text = "ex) 요 3장 16절 / 하나님이 세상을",
-                                fontSize = 16.sp,
-                                modifier = Modifier
-                                    .align(Alignment.CenterVertically)
-                                    .alpha(0.5f)
+                                text = "검색 시 2자 이상 입력해 주세요", fontSize = 16.sp,
+                                style = TextStyle(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(
+                                        alpha = 0.5f
+                                    )
+                                ),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
                         }
                         innerTextField()
-                    }, modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp)
-                    )
-
-                    ThemedIcon(
-                        iconResLight = R.drawable.search_light,
-                        iconResDark = R.drawable.search_dark,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .padding(12.dp)
-                    )
-                }
+                    },
+                    maxLines = 1,
+                )
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            ThemedIconButton(
-                iconResLight = R.drawable.menu_light,
-                iconResDark = R.drawable.menu_dark,
+        }
+    }
+}
+
+@Composable
+fun FloatingHistoryButton(isHistoryExpanded: Boolean, onHistoryButtonClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (!isHistoryExpanded) {
+            ThemedIconButton(iconResLight = R.drawable.history_light,
+                iconResDark = R.drawable.history_dark,
                 modifier = Modifier
-                    .size(48.dp)
-                    .padding(12.dp),
-                onClick = onMenuClick
-            )
+                    .size(60.dp)
+                    .shadow(4.dp, shape = CircleShape)
+                    .background(MaterialTheme.colorScheme.primary, shape = CircleShape),
+                onClick = { onHistoryButtonClick() })
+        } else {
+            ThemedIconButton(iconResLight = R.drawable.close_light,
+                iconResDark = R.drawable.close_dark,
+                modifier = Modifier
+                    .size(60.dp)
+                    .shadow(4.dp, shape = CircleShape)
+                    .background(MaterialTheme.colorScheme.primary, shape = CircleShape),
+                onClick = { onHistoryButtonClick() })
         }
     }
 }
@@ -375,13 +416,9 @@ fun FindingGrid(
     Row(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
-                .width(160.dp)
-                .padding(4.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surface),
+                .width(160.dp),
             contentAlignment = Alignment.Center
         ) {
-
             LazyColumn(
                 modifier = Modifier,
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -390,8 +427,11 @@ fun FindingGrid(
                 items(currentBookList.size) { index ->
                     Box(modifier = Modifier
                         .width(160.dp)
-                        .height(40.dp)
-                        .background(if (index == selectedBook.intValue) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
+                        .height(60.dp)
+                        .background(
+                            if (index == selectedBook.intValue) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                        )
                         .clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() },
@@ -400,35 +440,40 @@ fun FindingGrid(
                         }) {
                         Text(
                             text = currentBookList[index],
-                            fontSize = 12.sp,
-                            modifier = Modifier.align(Alignment.Center)
+                            fontSize = 16.sp,
+                            modifier = Modifier.align(Alignment.Center),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
             }
         }
-        Box(
+        Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(8.dp)
+
         ) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(BOOK_CHAPTER_COUNT_LIST[selectedBook.intValue]) { chapter ->
-                    Box(
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clickable(indication = null,
-                                interactionSource = remember { MutableInteractionSource() }) {
-                                onGridClick(selectedBook.intValue, chapter)
-                            },
-                        contentAlignment = Alignment.Center
+                    Box(modifier = Modifier
+                        .size(60.dp)
+                        .clickable(indication = null,
+                            interactionSource = remember { MutableInteractionSource() }) {
+                            onGridClick(selectedBook.intValue, chapter)
+                        }, contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "${chapter + 1}")
+                        Text(
+                            text = "${chapter + 1}",
+                            textDecoration = TextDecoration.Underline,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
                 }
             }
@@ -445,28 +490,64 @@ fun SearchResult(
     bookValues: List<List<Verse>>,
     searchedListState: LazyListState,
     coroutineScope: CoroutineScope,
-    onVerseClick: (Int, Int, String) -> Unit
+    onVerseClick: (Verse, String) -> Unit
 ) {
+    val fs = LocalDensity.current.fontScale
+    val absoluteFontSizeInPx = 12f
+    val fontSizeInDp = absoluteFontSizeInPx / fs
+
     Row(
         modifier = Modifier.fillMaxHeight()
     ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxHeight()
+                .weight(1f), state = searchedListState
+        ) {
+
+            items(
+                bookKeys.size,
+            ) { bookIndex ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(8.dp)
+                        ), contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = currentBookList[bookKeys[bookIndex]],
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(
+                            vertical = 8.dp, horizontal = 16.dp
+                        )
+                    )
+                }
+                bookValues[bookIndex].forEach { verse ->
+                    SearchedVerseItem(currentBookList = currentBookList,
+                        verse = verse,
+                        query = searchQuery,
+                        onVerseClick = { v, query ->
+                            onVerseClick(v, query)
+                        })
+                }
+            }
+        }
+
         Box(
             modifier = Modifier
-                .width(40.dp)
-                .padding(4.dp)
+                .width(48.dp)
+                .padding(8.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surface),
-            contentAlignment = Alignment.Center
+                .background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center
         ) {
             LazyColumn(
-                modifier = Modifier
-                    .width(40.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.width(40.dp), horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 items(bookKeys.size) { index ->
                     Box(modifier = Modifier
-                        .size(40.dp)
-                        .padding(4.dp)
+                        .size(48.dp)
                         .clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() },
@@ -477,37 +558,10 @@ fun SearchResult(
                         }) {
                         Text(
                             text = currentBookShortList[bookKeys[index]],
-                            fontSize = 12.sp,
+                            fontSize = fontSizeInDp.sp,
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
-                }
-            }
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxHeight()
-                .weight(1f), state = searchedListState
-        ) {
-
-            items(
-                bookKeys.size,
-            ) { bookIndex ->
-                Text(
-                    text = currentBookList[bookKeys[bookIndex]],
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(
-                        vertical = 8.dp, horizontal = 16.dp
-                    )
-                )
-                bookValues[bookIndex].forEachIndexed { verseIndex, verse ->
-                    SearchedVerseItem(currentBookList = currentBookList,
-                        verse = verse,
-                        query = searchQuery,
-                        onVerseClick = { page, index, query ->
-                            onVerseClick(page, index, query)
-                        })
                 }
             }
         }
@@ -519,45 +573,66 @@ fun SearchedVerseItem(
     currentBookList: Array<String>,
     verse: Verse,
     query: String,
-    onVerseClick: (Int, Int, String) -> Unit
+    onVerseClick: (Verse, String) -> Unit,
 ) {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(vertical = 8.dp)
-        .clickable(indication = null, interactionSource = remember {
-            MutableInteractionSource()
-        }) {
-            onVerseClick(verse.page, verse.verse, query)
-        }) {
-        Text(
-            text = "${currentBookList[verse.book]} ${verse.chapter + 1}",
-            style = MaterialTheme.typography.titleSmall
-        )
 
-        val highlightStyle = SpanStyle(
-            fontWeight = FontWeight.Bold,
-        )
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(4.dp)
+            .shadow(4.dp, shape = RoundedCornerShape(4.dp))
+            .background(
+                MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(4.dp)
+            )
+    ) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .padding(vertical = 8.dp)
+            .clickable(indication = null, interactionSource = remember {
+                MutableInteractionSource()
+            }) {
+                onVerseClick(verse, query)
+            }) {
+            Text(
+                text = "${currentBookList[verse.book]} ${verse.chapter + 1}:${verse.verseNumber}",
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
 
-        val annotatedText = buildAnnotatedString {
-            var startIndex = 0
-            while (startIndex < verse.textRaw.length) {
-                val matchIndex = verse.textRaw.indexOf(query, startIndex, ignoreCase = true)
-                if (matchIndex == -1) {
-                    append(verse.textRaw.substring(startIndex))
-                    break
-                } else {
-                    append(verse.textRaw.substring(startIndex, matchIndex))
-                    withStyle(highlightStyle) {
-                        append(verse.textRaw.substring(matchIndex, matchIndex + query.length))
+            val highlightStyle = SpanStyle(fontWeight = FontWeight.Bold)
+            val queryWords = query.split(" ").filter { it.isNotEmpty() }
+
+            val annotatedText = buildAnnotatedString {
+                var startIndex = 0
+                while (startIndex < verse.textRaw.length) {
+                    val match = queryWords.mapNotNull { word ->
+                        val index = verse.textRaw.indexOf(word, startIndex, ignoreCase = true)
+                        if (index != -1) index to word else null
+                    }.minByOrNull { it.first }
+
+                    if (match == null) {
+                        append(verse.textRaw.substring(startIndex))
+                        break
+                    } else {
+                        val (matchIndex, matchedWord) = match
+                        append(verse.textRaw.substring(startIndex, matchIndex))
+                        withStyle(highlightStyle) {
+                            append(
+                                verse.textRaw.substring(
+                                    matchIndex, matchIndex + matchedWord.length
+                                )
+                            )
+                        }
+                        startIndex = matchIndex + matchedWord.length
                     }
-                    startIndex = matchIndex + query.length
                 }
             }
-        }
 
-        Text(
-            text = annotatedText, style = MaterialTheme.typography.bodyMedium
-        )
+            Text(
+                text = annotatedText, style = MaterialTheme.typography.bodyMedium
+            )
+        }
     }
 }
 
@@ -566,26 +641,49 @@ fun HistoryVerseItem(
     currentBookList: Array<String>,
     verse: Verse,
     query: String,
-    onVerseClick: (Int, Int, String) -> Unit
+    onVerseClick: (Verse, String) -> Unit,
+    onDeleteVerseClick: (Verse, String) -> Unit
 ) {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(vertical = 8.dp)
-        .clickable(indication = null, interactionSource = remember {
-            MutableInteractionSource()
-        }) {
-            onVerseClick(verse.page, verse.verse, query)
-        }) {
-        Text(
-            text = "검색어: ${query}", style = MaterialTheme.typography.bodySmall
-        )
-        Text(
-            text = "${currentBookList[verse.book]} ${verse.chapter + 1} ${verse.verseNumber}",
-            style = MaterialTheme.typography.titleSmall
-        )
-        Text(
-            text = verse.textRaw, style = MaterialTheme.typography.bodyMedium
-        )
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(4.dp)
+
+    ) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .padding(vertical = 8.dp)
+            .clickable(indication = null, interactionSource = remember {
+                MutableInteractionSource()
+            }) {
+                onVerseClick(verse, query)
+            }) {
+            Text(
+                text = "검색어: ${query}",
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "${currentBookList[verse.book]} ${verse.chapter + 1}:${verse.verseNumber}",
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = verse.textRaw, style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        Box(
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
+            ThemedIconButton(iconResLight = R.drawable.delete_light,
+                iconResDark = R.drawable.delete_dark,
+                modifier = Modifier.size(48.dp),
+                onClick = { onDeleteVerseClick(verse, query) })
+        }
     }
 }
 

@@ -13,6 +13,10 @@ class PreferenceManager(context: Context) {
         get() = sharedPref.getInt("currentVersion", 0)
         set(value) = sharedPref.edit().putInt("currentVersion", value).apply()
 
+    var currentSubVersion: Int
+        get() = sharedPref.getInt("currentSubVersion", -1)
+        set(value) = sharedPref.edit().putInt("currentSubVersion", value).apply()
+
     var fontSize: Float
         get() = sharedPref.getFloat("fontSize", 16f)
         set(value) = sharedPref.edit().putFloat("fontSize", value).apply()
@@ -25,7 +29,11 @@ class PreferenceManager(context: Context) {
         get() = sharedPref.getString("fontFamily", "Default")
         set(value) = sharedPref.edit().putString("fontFamily", value).apply()
 
-    var isDarkModeEnabled: Boolean
-        get() = sharedPref.getBoolean("isDarkModeEnabled", false)
-        set(value) = sharedPref.edit().putBoolean("isDarkModeEnabled", value).apply()
+    var themeMode: Int
+        get() = sharedPref.getInt("themeMode", 0)
+        set(value) = sharedPref.edit().putInt("themeMode", value).apply()
+
+    var saveColor: Int
+        get() = sharedPref.getInt("saveColor", 0)
+        set(value) = sharedPref.edit().putInt("saveColor", value).apply()
 }
