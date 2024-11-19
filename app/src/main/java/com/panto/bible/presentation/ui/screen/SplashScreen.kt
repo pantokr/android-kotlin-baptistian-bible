@@ -1,6 +1,7 @@
 package com.panto.bible.presentation.ui.screen
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -14,11 +15,12 @@ import java.io.InputStream
 
 @Composable
 fun SplashScreen(context: Context) {
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        val bitmap = loadBitmapFromAssets(context, "splash.jpg")
+        val bitmap = loadSplashBitmapFromAssets(context, "splash.jpg")
         bitmap?.let {
             Image(
                 bitmap = it.asImageBitmap(),
@@ -30,8 +32,7 @@ fun SplashScreen(context: Context) {
     }
 }
 
-
-fun loadBitmapFromAssets(context: Context, fileName: String): android.graphics.Bitmap? {
+fun loadSplashBitmapFromAssets(context: Context, fileName: String): Bitmap? {
     return try {
         val inputStream: InputStream = context.assets.open(fileName)
         BitmapFactory.decodeStream(inputStream)

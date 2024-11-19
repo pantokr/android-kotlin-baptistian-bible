@@ -43,10 +43,17 @@ android {
 }
 
 dependencies {
+    implementation(libs.retrofit)
+    implementation(libs.retrofit2.converter.gson)
+
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.androidx.room.common)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.espresso.core)
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.opencsv)

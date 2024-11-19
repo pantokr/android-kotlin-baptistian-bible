@@ -13,23 +13,30 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.panto.bible.data.local.LocalDataSource
 import com.panto.bible.data.local.PreferenceManager
-import com.panto.bible.data.local.VerseLocalDataSource
+import com.panto.bible.presentation.ui.screen.DictionaryScreen
+import com.panto.bible.presentation.ui.screen.HymnScreen
 import com.panto.bible.presentation.ui.screen.SearchScreen
 import com.panto.bible.presentation.ui.screen.SettingsScreen
 import com.panto.bible.presentation.ui.screen.SplashScreen
 import com.panto.bible.presentation.ui.screen.VerseScreen
 import com.panto.bible.presentation.ui.screen.VersionScreen
+import com.panto.bible.presentation.ui.screen.WebViewScreen
+import com.panto.bible.presentation.ui.viewmodel.DictionaryViewModel
 import com.panto.bible.presentation.ui.viewmodel.MainViewModel
 import com.panto.bible.presentation.ui.viewmodel.MainViewModelFactory
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModelFactory
 import com.panto.bible.ui.theme.BibleTheme
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var mainViewModel: MainViewModel
     private lateinit var settingsViewModel: SettingsViewModel
+    private val dictionaryViewModel: DictionaryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         //  deleteDatabase("han_database.db")
@@ -40,7 +47,7 @@ class MainActivity : ComponentActivity() {
         actionBar?.hide()
         // WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        val verseLocalDataSource = VerseLocalDataSource(applicationContext)
+        val verseLocalDataSource = LocalDataSource(applicationContext)
         val preferenceManager = PreferenceManager(applicationContext)
         val mainViewModelFactory = MainViewModelFactory(verseLocalDataSource, preferenceManager)
         val settingsViewModelFactory = SettingsViewModelFactory(preferenceManager)
@@ -61,34 +68,49 @@ class MainActivity : ComponentActivity() {
                         SplashScreen(applicationContext)
                     } else {
                         val navController = rememberNavController()
-                        NavHost(navController, startDestination = "verseScreen") {
-                            composable("verseScreen") {
+                        NavHost(navController, startDestination = "VerseScreen") {
+                            composable("VerseScreen") {
                                 VerseScreen(
                                     mainViewModel,
                                     settingsViewModel,
                                     navController
                                 )
                             }
-                            composable("settingsScreen") {
+                            composable("SettingsScreen") {
                                 SettingsScreen(
-                                    mainViewModel,
                                     settingsViewModel,
                                     navController
                                 )
                             }
-                            composable("searchScreen") {
+                            composable("SearchScreen") {
                                 SearchScreen(
                                     mainViewModel,
-                                    settingsViewModel,
                                     navController
                                 )
                             }
-                            composable("versionScreen") {
+                            composable("VersionScreen") {
                                 VersionScreen(
                                     mainViewModel,
-                                    settingsViewModel,
                                     navController
                                 )
+                            }
+                            composable("HymnScreen") {
+                                HymnScreen(
+                                    mainViewModel,
+                                    navController
+                                )
+                            }
+                            composable("DictionaryScreen") {
+                                DictionaryScreen(
+                                    dictionaryViewModel,
+                                    navController
+                                )
+                            }
+                            composable("webViewScreen/{url}") { backStackEntry ->
+                                val encodedUrl = backStackEntry.arguments?.getString("url") ?: ""
+                                val decodedUrl =
+                                    URLDecoder.decode(encodedUrl, StandardCharsets.UTF_8.toString())
+                                WebViewScreen(decodedUrl, navController)
                             }
                         }
                     }

@@ -2,6 +2,8 @@
 accompanistPager = "<latest_version>"
 activityCompose = "1.9.3"
 agp = "8.7.2"
+converterGson = "2.10.0"
+converterSimplexml = "2.9.0"
 kotlin = "1.9.10"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -9,6 +11,7 @@ espressoCore = "3.6.1"
 kotlinxCoroutinesAndroid = "1.7.3"
 navigationCompose = "2.8.3"
 opencsv = "5.5.2"
+retrofit = "2.10.0"
 roomCommon = "2.6.1"
 roomKtx = "2.6.1"
 activityKtx = "1.9.3"
@@ -31,6 +34,9 @@ androidx-foundation-android = { group = "androidx.compose.foundation", name = "f
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
 opencsv = { module = "com.opencsv:opencsv", version.ref = "opencsv" }
 androidx-compose-material3 = { group = "androidx.wear.compose", name = "compose-material3", version.ref = "composeMaterial3" }
+retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+retrofit2-converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
+retrofit2-converter-simplexml = { module = "com.squareup.retrofit2:converter-simplexml", version.ref = "converterSimplexml" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

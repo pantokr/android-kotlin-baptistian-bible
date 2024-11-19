@@ -12,8 +12,9 @@ import com.panto.bible.data.local.BibleConstant.LANGUAGE_LIST
 import com.panto.bible.data.local.BibleConstant.TAG
 import com.panto.bible.data.local.BibleConstant.VERSE_COUNT_LIST
 import com.panto.bible.data.local.BibleConstant.VERSION_LIST
+import com.panto.bible.data.local.LocalDataSource
 import com.panto.bible.data.local.PreferenceManager
-import com.panto.bible.data.local.VerseLocalDataSource
+import com.panto.bible.data.model.Hymn
 import com.panto.bible.data.model.Save
 import com.panto.bible.data.model.Verse
 import kotlinx.coroutines.delay
@@ -22,8 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class MainViewModel(
-    private val verseLocalDataSource: VerseLocalDataSource,
-    private val preferenceManager: PreferenceManager
+    private val localDataSource: LocalDataSource, private val preferenceManager: PreferenceManager
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(true)
@@ -41,9 +41,6 @@ class MainViewModel(
     val _subVerses = MutableStateFlow<List<String>>(emptyList())
     val subVerses = _subVerses.asStateFlow()
 
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery = _searchQuery.asStateFlow()
-
     private val _selectedVerse = MutableStateFlow(-1)
     val selectedVerse = _selectedVerse.asStateFlow()
 
@@ -59,6 +56,9 @@ class MainViewModel(
     private val _saved = MutableStateFlow<List<Save>>(emptyList())
     val saved = _saved.asStateFlow()
 
+    private val _searchedHymns = MutableStateFlow<List<Hymn>>(emptyList())
+    val searchedHymns = _searchedHymns.asStateFlow()
+
     private val _currentPage = MutableStateFlow(preferenceManager.currentPage)
     val currentPage = _currentPage.asStateFlow()
 
@@ -73,8 +73,10 @@ class MainViewModel(
             if (LANGUAGE_LIST[0].contains(_currentVersion.value)) BOOK_LIST_KOR else BOOK_LIST_ENG
         _currentBookShortList.value =
             if (LANGUAGE_LIST[0].contains(_currentVersion.value)) BOOK_LIST_KOR_SHORT else BOOK_LIST_ENG_SHORT
+
         viewModelScope.launch {
             loadVerses()
+            loadHymns()
         }
     }
 
@@ -98,7 +100,7 @@ class MainViewModel(
 
     fun getVersesByPage(page: Int) {
         viewModelScope.launch {
-            val verses = verseLocalDataSource.getVersesByPage(_currentVersion.value, page)
+            val verses = localDataSource.getVersesByPage(_currentVersion.value, page)
             _verses.value = verses
 
             _currentPage.value = page
@@ -113,7 +115,7 @@ class MainViewModel(
     fun getVersesByBookAndChapter(book: Int, chapter: Int) {
         viewModelScope.launch {
             val verses =
-                verseLocalDataSource.getVersesByBookAndChapter(_currentVersion.value, book, chapter)
+                localDataSource.getVersesByBookAndChapter(_currentVersion.value, book, chapter)
             _verses.value = verses
 
             val p = verses[0].page
@@ -128,7 +130,7 @@ class MainViewModel(
     fun getSubVersesByPage(page: Int) {
         viewModelScope.launch {
             if (_currentSubVersion.value != -1) {
-                val verses = verseLocalDataSource.getVersesByPage(_currentSubVersion.value, page)
+                val verses = localDataSource.getVersesByPage(_currentSubVersion.value, page)
                 _subVerses.value = verses.map { it.textRaw }
 
                 handleBibleVersionDifference()
@@ -137,17 +139,24 @@ class MainViewModel(
     }
 
     fun searchVerses(query: String) {
-        query.also {
-            _searchQuery.value = it
-        }
 
         viewModelScope.launch {
-            if (_searchQuery.value.length >= 2) {
-                _searchedVerses.value =
-                    verseLocalDataSource.searchVerses(_currentVersion.value, query)
+            if (query.length >= 2) {
+                _searchedVerses.value = localDataSource.searchVerses(_currentVersion.value, query)
 
-            } else if (_searchQuery.value.isBlank()) {
+            } else {
                 _searchedVerses.value = listOf()
+            }
+        }
+    }
+
+    fun searchHymns(query: String) {
+
+        viewModelScope.launch {
+            if (query.length >= 2) {
+                _searchedHymns.value = localDataSource.searchHymns(query = query)
+            } else if (query.isBlank()) {
+                _searchedHymns.value = localDataSource.searchHymns(query = " ") // 모두 찾기
             }
         }
     }
@@ -160,9 +169,9 @@ class MainViewModel(
         viewModelScope.launch {
             try {
                 val currentTime = System.currentTimeMillis().toInt()
-                verseLocalDataSource.deleteHistoryByQuery(verse, query)
+                localDataSource.deleteHistoryByQuery(verse, query)
 
-                verseLocalDataSource.insertHistory(
+                localDataSource.insertHistory(
                     time = currentTime, page = verse.page, verse = verse.verse, query = query
                 )
             } catch (e: Exception) {
@@ -175,12 +184,12 @@ class MainViewModel(
     fun getHistories() {
         viewModelScope.launch {
             try {
-                val searchHistories = verseLocalDataSource.getRecentHistories()
+                val searchHistories = localDataSource.getRecentHistories()
 
                 val queryList = mutableListOf<String>()
                 val verseList = mutableListOf<Verse>()
                 searchHistories.forEach { history ->
-                    val verse = verseLocalDataSource.getVerseByPageAndVerse(
+                    val verse = localDataSource.getVerseByPageAndVerse(
                         version = _currentVersion.value, page = history.page, verse = history.verse
                     )
                     queryList.add(history.query)
@@ -197,14 +206,14 @@ class MainViewModel(
 
     fun deleteHistory(verse: Verse, query: String) {
         viewModelScope.launch {
-            verseLocalDataSource.deleteHistoryByQuery(verse, query)
+            localDataSource.deleteHistoryByQuery(verse, query)
             getHistories()
         }
     }
 
     fun deleteAllHistory() {
         viewModelScope.launch {
-            verseLocalDataSource.deleteAllHistory()
+            localDataSource.deleteAllHistory()
             getHistories()
         }
     }
@@ -212,13 +221,13 @@ class MainViewModel(
     fun insertSave(verse: Verse, color: Int) {
         viewModelScope.launch {
             if (color == -1) {
-                verseLocalDataSource.deleteSaves(verse.page, verse.verse)
+                localDataSource.deleteSaves(verse.page, verse.verse)
             } else {
                 try {
                     val currentTime = System.currentTimeMillis().toInt()
-                    verseLocalDataSource.deleteSaves(verse.page, verse.verse)
+                    localDataSource.deleteSaves(verse.page, verse.verse)
 
-                    verseLocalDataSource.insertSave(
+                    localDataSource.insertSave(
                         time = currentTime, page = verse.page, verse = verse.verse, color = color
                     )
 
@@ -233,14 +242,14 @@ class MainViewModel(
 
     fun getSavesByPage(page: Int) {
         viewModelScope.launch {
-            val saves = verseLocalDataSource.getSavesByPage(page)
+            val saves = localDataSource.getSavesByPage(page)
             _saved.value = saves
         }
     }
 
     fun getAllSavesGroupedByTime() {
         viewModelScope.launch {
-            val saves = verseLocalDataSource.getAllSaves()
+            val saves = localDataSource.getAllSaves()
             saves.groupBy { it.time }.values.toList()
         }
     }
@@ -248,8 +257,8 @@ class MainViewModel(
     private fun loadVerses() {
         viewModelScope.launch {
             for (version in VERSION_LIST) {
-                if (verseLocalDataSource.getVersesCount(VERSION_LIST.indexOf(version)) == 0) {
-                    verseLocalDataSource.loadVersesFromCSV(
+                if (localDataSource.getVersesCount(VERSION_LIST.indexOf(version)) == 0) {
+                    localDataSource.loadVersesFromCSV(
                         "${version}.csv", VERSION_LIST.indexOf(version)
                     )
                 }
@@ -257,7 +266,7 @@ class MainViewModel(
             while (true) {
                 var currentCount = 0
                 for (version in VERSION_LIST) {
-                    currentCount += verseLocalDataSource.getVersesCount(VERSION_LIST.indexOf(version))
+                    currentCount += localDataSource.getVersesCount(VERSION_LIST.indexOf(version))
                 }
                 if (currentCount >= VERSE_COUNT_LIST.sum()) {
                     Log.d(TAG, "모든 구절 로드 완료")
@@ -276,6 +285,14 @@ class MainViewModel(
             Log.d(TAG, "구절 출력 준비 완료")
 
             _isLoading.value = false
+        }
+    }
+
+    private fun loadHymns() {
+        viewModelScope.launch {
+            if (localDataSource.getHymnsCount() == 0) {
+                localDataSource.loadHymnsFromCSV()
+            }
         }
     }
 

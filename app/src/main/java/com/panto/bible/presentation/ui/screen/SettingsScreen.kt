@@ -1,5 +1,6 @@
 package com.panto.bible.presentation.ui.screen
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -33,13 +34,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.panto.bible.R
-import com.panto.bible.presentation.ui.viewmodel.MainViewModel
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
 import com.panto.bible.ui.ThemedIconButton
 
 @Composable
 fun SettingsScreen(
-    mainViewModel: MainViewModel,
     settingsViewModel: SettingsViewModel,
     navController: NavHostController
 ) {
@@ -50,6 +49,15 @@ fun SettingsScreen(
 
     var exFontSize by remember { mutableFloatStateOf(fontSize) }
     var exParagraphSpacing by remember { mutableFloatStateOf(fontSize) }
+
+    BackHandler {
+        navController.navigate("VerseScreen") {
+            popUpTo(navController.graph.id) {
+                inclusive = true
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
             SettingsAppBar(onBackClick = {

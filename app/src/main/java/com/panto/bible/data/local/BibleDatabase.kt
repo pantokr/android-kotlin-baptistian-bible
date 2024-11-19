@@ -4,12 +4,17 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.panto.bible.data.local.dao.HistoryDao
+import com.panto.bible.data.local.dao.HymnDao
+import com.panto.bible.data.local.dao.SaveDao
+import com.panto.bible.data.local.dao.VerseDao
 import com.panto.bible.data.model.History
+import com.panto.bible.data.model.Hymn
 import com.panto.bible.data.model.Save
 import com.panto.bible.data.model.Verse
 
 @Database(
-    entities = [Verse::class, History::class, Save::class],
+    entities = [Verse::class, History::class, Save::class, Hymn::class],
     version = 1,
     exportSchema = false
 )
@@ -17,6 +22,7 @@ abstract class BibleDatabase : RoomDatabase() {
     abstract fun verseDao(): VerseDao
     abstract fun historyDao(): HistoryDao
     abstract fun saveDao(): SaveDao
+    abstract fun hymnDao(): HymnDao
 
     companion object {
         @Volatile
@@ -24,11 +30,12 @@ abstract class BibleDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context, version: String): BibleDatabase {
             val dbName = when (version) {
-                "han" -> "han_database.db"
-                "gae" -> "gae_database.db"
-                "history" -> "history_database.db"
-                "save" -> "save_database.db"
-                else -> "default_database.db"
+                "han" -> "han.db"
+                "gae" -> "gae.db"
+                "history" -> "history.db"
+                "save" -> "save.db"
+                "hymns" -> "hymns.db"
+                else -> "default.db"
             }
 
             return instances.getOrPut(dbName) {

@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -65,7 +66,6 @@ import com.panto.bible.R
 import com.panto.bible.data.local.BibleConstant.BOOK_CHAPTER_COUNT_LIST
 import com.panto.bible.data.model.Verse
 import com.panto.bible.presentation.ui.viewmodel.MainViewModel
-import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
 import com.panto.bible.ui.ThemedIconButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -74,14 +74,12 @@ import kotlin.math.max
 @Composable
 fun SearchScreen(
     mainViewModel: MainViewModel,
-    settingsViewModel: SettingsViewModel,
     navController: NavHostController
 ) {
     val verses by mainViewModel.verses.collectAsState()
     val currentBookList by mainViewModel.currentBookList.collectAsState()
     val currentBookShortList by mainViewModel.currentBookShortList.collectAsState()
 
-    val searchQuery by mainViewModel.searchQuery.collectAsState()
     val searchedVerses by mainViewModel.searchedVerses.collectAsState()
     val historyVerses by mainViewModel.historyVerses.collectAsState()
     val historyQueries by mainViewModel.historyQueries.collectAsState()
@@ -100,6 +98,24 @@ fun SearchScreen(
     val bookKeys = groupedVerses.keys.toList()
     val bookValues = groupedVerses.values.toList()
 
+    val query = remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        mainViewModel.searchVerses("")
+        mainViewModel.getHistories()
+        // focusRequester.requestFocus()
+        findingListState.scrollToItem(
+            max(
+                0, selectedBook.intValue - findingListState.layoutInfo.visibleItemsInfo.size / 2
+            )
+        )
+    }
+
+    LaunchedEffect(query.value) {
+        if (query.value.isNotBlank()) {
+            isHistoryExpanded = false
+        }
+    }
 
     BackHandler {
         if (isHistoryExpanded) {
@@ -113,34 +129,19 @@ fun SearchScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        mainViewModel.searchVerses("")
-        mainViewModel.getHistories()
-        // focusRequester.requestFocus()
-        findingListState.scrollToItem(
-            max(
-                0, selectedBook.intValue - findingListState.layoutInfo.visibleItemsInfo.size / 2
-            )
-        )
-    }
-
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
         Column {
-            // AppBar(onCloseClick = { navController.popBackStack() })
-            SearchField(
-                focusRequester = focusRequester,
-                onBackClick = {
-                    navController.navigate("VerseScreen") {
-                        popUpTo(navController.graph.id) {
-                            inclusive = true
-                        }
+            SearchField(query = query, onBackClick = {
+                navController.navigate("VerseScreen") {
+                    popUpTo(navController.graph.id) {
+                        inclusive = true
                     }
-                },
-                onSearchChanged = { query ->
-                    mainViewModel.searchVerses(query)
-                })
+                }
+            }, onSearchChanged = { query ->
+                mainViewModel.searchVerses(query)
+            })
 
             HorizontalDivider(
                 modifier = Modifier
@@ -159,7 +160,7 @@ fun SearchScreen(
                     Column(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        if (searchQuery.length < 2) {
+                        if (searchedVerses.isEmpty()) {
                             FindingGrid(currentBookList = currentBookList,
                                 selectedBook = selectedBook,
                                 findingListState = findingListState,
@@ -194,7 +195,7 @@ fun SearchScreen(
 
                                 SearchResult(currentBookList = currentBookList,
                                     currentBookShortList = currentBookShortList,
-                                    searchQuery = searchQuery,
+                                    query = query.value,
                                     bookKeys = bookKeys,
                                     bookValues = bookValues,
                                     searchedListState = searchedListState,
@@ -229,12 +230,14 @@ fun SearchScreen(
                         modifier = Modifier
                             .fillMaxHeight()
                             .background(
-                                MaterialTheme.colorScheme.secondary,
-                                shape = RoundedCornerShape(8.dp)
+                                MaterialTheme.colorScheme.secondary
                             )
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding()
+
                         ) {
                             if (historyVerses.isEmpty()) {
                                 Row(
@@ -321,14 +324,12 @@ fun SearchScreen(
 
 @Composable
 fun SearchField(
-    focusRequester: FocusRequester, onBackClick: () -> Unit, onSearchChanged: (String) -> Unit
+    query: MutableState<String>, onBackClick: () -> Unit, onSearchChanged: (String) -> Unit
 ) {
-    var query by remember { mutableStateOf("") }
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp), contentAlignment = Alignment.Center
+            .height(60.dp)
 
     ) {
         Row(
@@ -344,19 +345,17 @@ fun SearchField(
                 modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart
             ) {
                 BasicTextField(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-//                        .focusRequester(focusRequester = focusRequester),
-                    value = query,
+                    modifier = Modifier.fillMaxWidth(),
+                    value = query.value,
                     onValueChange = { newText ->
                         val reduced = newText.replace("\n", "")
-                        query = reduced
+                        query.value = reduced
                         onSearchChanged(reduced)
                     },
                     textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(value = MaterialTheme.colorScheme.onSurface),
                     decorationBox = { innerTextField ->
-                        if (query.isEmpty()) {
+                        if (query.value.isEmpty()) {
                             Text(
                                 text = "검색 시 2자 이상 입력해 주세요", fontSize = 16.sp,
                                 style = TextStyle(
@@ -415,9 +414,7 @@ fun FindingGrid(
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         Box(
-            modifier = Modifier
-                .width(160.dp),
-            contentAlignment = Alignment.Center
+            modifier = Modifier.width(160.dp), contentAlignment = Alignment.Center
         ) {
             LazyColumn(
                 modifier = Modifier,
@@ -485,7 +482,7 @@ fun FindingGrid(
 fun SearchResult(
     currentBookList: Array<String>,
     currentBookShortList: Array<String>,
-    searchQuery: String,
+    query: String,
     bookKeys: List<Int>,
     bookValues: List<List<Verse>>,
     searchedListState: LazyListState,
@@ -525,9 +522,9 @@ fun SearchResult(
                     )
                 }
                 bookValues[bookIndex].forEach { verse ->
-                    SearchedVerseItem(currentBookList = currentBookList,
-                        verse = verse,
-                        query = searchQuery,
+                    SearchedVerseItem(verse = verse,
+                        query = query,
+                        currentBookList = currentBookList,
                         onVerseClick = { v, query ->
                             onVerseClick(v, query)
                         })
@@ -589,6 +586,9 @@ fun SearchedVerseItem(
             .fillMaxWidth()
             .padding(8.dp)
             .padding(vertical = 8.dp)
+            .background(
+                MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(4.dp)
+            )
             .clickable(indication = null, interactionSource = remember {
                 MutableInteractionSource()
             }) {
@@ -638,9 +638,9 @@ fun SearchedVerseItem(
 
 @Composable
 fun HistoryVerseItem(
-    currentBookList: Array<String>,
     verse: Verse,
     query: String,
+    currentBookList: Array<String>,
     onVerseClick: (Verse, String) -> Unit,
     onDeleteVerseClick: (Verse, String) -> Unit
 ) {
@@ -648,7 +648,10 @@ fun HistoryVerseItem(
         modifier = Modifier
             .fillMaxHeight()
             .padding(4.dp)
-
+            .shadow(4.dp, shape = RoundedCornerShape(4.dp))
+            .background(
+                MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(4.dp)
+            )
     ) {
         Column(modifier = Modifier
             .fillMaxWidth()

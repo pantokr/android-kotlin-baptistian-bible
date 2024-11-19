@@ -1,5 +1,6 @@
 package com.panto.bible.presentation.ui.screen
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -24,23 +25,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.panto.bible.R
 import com.panto.bible.data.local.BibleConstant.VERSION_LIST_KOR
 import com.panto.bible.presentation.ui.viewmodel.MainViewModel
-import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
 import com.panto.bible.ui.ThemedIconButton
 
 @Composable
 fun VersionScreen(
     mainViewModel: MainViewModel,
-    settingsViewModel: SettingsViewModel,
     navController: NavHostController
 ) {
     val currentVersion by mainViewModel.currentVersion.collectAsState() // 현재 버전
     val currentSubVersion by mainViewModel.currentSubVersion.collectAsState() // 현재 대역 버전
+
+    BackHandler {
+        navController.navigate("VerseScreen") {
+            popUpTo(navController.graph.id) {
+                inclusive = true
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -54,8 +60,10 @@ fun VersionScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(60.dp)
                     .background(color = MaterialTheme.colorScheme.background),
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
@@ -66,10 +74,6 @@ fun VersionScreen(
                     Text(text = "기본", style = MaterialTheme.typography.titleMedium)
                 }
 
-                Spacer(
-                    modifier = Modifier.width(2.dp)
-                )
-
                 Box(
                     modifier = Modifier.weight(1f), contentAlignment = Alignment.Center
                 ) {
@@ -77,35 +81,18 @@ fun VersionScreen(
                 }
             }
 
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
-
             HorizontalDivider(
                 modifier = Modifier
                     .height(2.dp)
                     .background(Color.Gray.copy(alpha = 0.5f)),
             )
 
-            Row(
-                modifier = Modifier.background(
-                    color = MaterialTheme.colorScheme.primary.copy(
-                        0.25f
-                    )
-                ),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-
-            ) {
+            Row {
+                Spacer(Modifier.width(4.dp))
                 Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary.copy(
-                                0.25f
-                            )
-                        ),
+                        .weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     VERSION_LIST_KOR.forEachIndexed { vIndex, version ->
                         VersionItem(
@@ -116,17 +103,11 @@ fun VersionScreen(
                             })
                     }
                 }
-
+                Spacer(Modifier.width(4.dp))
                 Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary.copy(
-                                0.25f
-                            )
-                        ),
+                        .weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     VersionItem(isCurrent = currentSubVersion == -1,
                         label = "없음",
@@ -139,6 +120,7 @@ fun VersionScreen(
                         }
                     }
                 }
+                Spacer(modifier = Modifier.width(4.dp))
             }
         }
     }
@@ -173,9 +155,12 @@ fun VersionItem(isCurrent: Boolean, label: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
+            .padding(top = 4.dp)
             .background(
-                color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Transparent,
-                shape = if (isCurrent) RoundedCornerShape(12.dp) else RectangleShape
+                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(
+                    alpha = 0.25f
+                ),
+                shape = RoundedCornerShape(12.dp)
             )
             .clickable(
                 indication = null,

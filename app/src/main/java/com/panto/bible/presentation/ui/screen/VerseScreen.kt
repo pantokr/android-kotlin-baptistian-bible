@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ClipData
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -37,6 +38,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
@@ -83,7 +85,7 @@ import com.panto.bible.presentation.ui.viewmodel.MainViewModel
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
 import com.panto.bible.ui.ThemedIcon
 import com.panto.bible.ui.ThemedIconButton
-import com.panto.bible.ui.animation.animateHighLightVerse
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.regex.Pattern
 
@@ -125,9 +127,21 @@ fun VerseScreen(
     val pageOffsetY = remember { Animatable(0f) } // 페이지 변환 시 페이지 애니메이션 용도
     val pageAlpha = remember { Animatable(1f) } // 페이지 변환 시 페이지 애니메이션 용도
 
+    // coroutineScope launch
     val coroutineScope = rememberCoroutineScope()  // 드래그 시 바로 이벤트 적용하도록
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed) // Drawer
-    val pageDragEffect: () -> Unit = {
+
+    val basicTapEffect: () -> Unit = { // Lazy Column이 Tap 이벤트 가로채는 것 방지
+        if (!isHighlightMode) {
+            isMenuVisible = !isMenuVisible
+        }
+        isPaletteVisible = false
+        isPopupVisible = false
+        isMenuDrawerVisible = false
+    }
+    val pageDragEffect: (page: Int) -> Unit = {
+        mainViewModel.selectVerse(-1)
+        mainViewModel.getVersesByPage(page = it)
         coroutineScope.launch {
             pageAlpha.snapTo(0f)
             pageAlpha.animateTo(1f, animationSpec = tween(durationMillis = 2000))
@@ -140,6 +154,10 @@ fun VerseScreen(
             pageOffsetY.animateTo(0f, animationSpec = tween(durationMillis = 1000))
         }
     }
+    val navChecker: () -> Unit = {
+        isMenuDrawerVisible = false
+        mainViewModel.selectVerse(-1)
+    }
     val menuDrawerIndication: () -> Unit = {
         coroutineScope.launch {
             drawerState.apply {
@@ -147,20 +165,38 @@ fun VerseScreen(
             }
         }
     }
-    val basicTapEffect: () -> Unit = { // Lazy Column이 Tap 이벤트 가로채는 것 방지
-        if (!isHighlightMode) {
-            isMenuVisible = !isMenuVisible
-        }
-        isPaletteVisible = false
-        isPopupVisible = false
-        isMenuDrawerVisible = false
-    }
+
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     var explanation by remember { mutableStateOf("") } // 성경 주석 내용
     val tappedVerses = remember { mutableStateListOf<Int>() } // Highlight 중인 구절
 
-    val clipboardManager = LocalClipboardManager.current
-    val context = LocalContext.current
+    LaunchedEffect(isMenuDrawerVisible) {
+        menuDrawerIndication()
+    }
+
+    LaunchedEffect(currentPage) {
+        isPopupVisible = false
+        isHighlightMode = false
+
+        if (selectedVerse != -1) {
+            listState.scrollToItem(selectedVerse)
+        } else {
+            listState.scrollToItem(0)
+        }
+    }
+
+    LaunchedEffect(isHighlightMode) {
+        if (!isHighlightMode) {
+            tappedVerses.clear()
+            isMenuVisible = true
+            isPaletteVisible = false
+        } else {
+            isMenuVisible = false
+            isMenuDrawerVisible = false
+        }
+    }
 
     BackHandler {
         if (isHighlightMode) {
@@ -178,48 +214,22 @@ fun VerseScreen(
         }
     }
 
-    LaunchedEffect(isMenuDrawerVisible) {
-        menuDrawerIndication()
-    }
-
-    LaunchedEffect(isHighlightMode) {
-        if (!isHighlightMode) {
-            tappedVerses.clear()
-            isMenuVisible = true
-            isPaletteVisible = false
-        } else {
-            isMenuVisible = false
-            isMenuDrawerVisible = false
-        }
-    }
-
-    LaunchedEffect(currentPage, selectedVerse) {
-        isPopupVisible = false
-        isHighlightMode = false
-        if (selectedVerse != -1) {
-            listState.scrollToItem(selectedVerse)
-        } else {
-            listState.scrollToItem(0)
-        }
-    }
-
     ModalNavigationDrawer(drawerState = drawerState, drawerContent = {
         ModalDrawerSheet(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.width(240.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(240.dp)
                     .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.TopCenter
             ) {
                 Box(
-                    modifier = Modifier.align(Alignment.CenterStart)
+                    modifier = Modifier.align(Alignment.TopEnd)
                 ) {
-                    ThemedIconButton(iconResLight = R.drawable.back_light,
-                        iconResDark = R.drawable.back_dark,
-                        modifier = Modifier.size(48.dp),
+                    ThemedIconButton(iconResLight = R.drawable.close_light,
+                        iconResDark = R.drawable.close_dark,
+                        modifier = Modifier.size(60.dp),
                         onClick = { isMenuDrawerVisible = !isMenuDrawerVisible })
                 }
                 Box(
@@ -232,13 +242,20 @@ fun VerseScreen(
                     )
                 }
             }
-
             DrawerItem(label = "개인 설정", onClick = {
                 navController.navigate("settingsScreen")
                 isMenuDrawerVisible = !isMenuDrawerVisible
             })
-            DrawerItem(label = "찬송가", onClick = {})
-            DrawerItem(label = "사전", onClick = { })
+            HorizontalDivider()
+            DrawerItem(label = "찬송가", onClick = {
+                navController.navigate("hymnScreen")
+                isMenuDrawerVisible = !isMenuDrawerVisible
+            })
+            HorizontalDivider()
+            DrawerItem(label = "사전", onClick = {
+                navController.navigate("dictionaryScreen")
+                isMenuDrawerVisible = !isMenuDrawerVisible
+            })
         }
     }) {
         Box(modifier = Modifier
@@ -254,13 +271,9 @@ fun VerseScreen(
                     .pointerInput(Unit) {
                         detectDragGestures(onDragEnd = {
                             if (dragOffsetX > 100 && currentPage > 0) {
-                                pageDragEffect()
-                                mainViewModel.getVersesByPage(currentPage - 1)
-                                mainViewModel.selectVerse(-1)
+                                pageDragEffect(currentPage - 1)
                             } else if (dragOffsetX < -100 && currentPage < 1188) {
-                                pageDragEffect()
-                                mainViewModel.getVersesByPage(currentPage + 1)
-                                mainViewModel.selectVerse(-1)
+                                pageDragEffect(currentPage + 1)
                             }
                             dragOffsetX = 0f
                         }, onDrag = { _, dragAmount ->
@@ -281,14 +294,33 @@ fun VerseScreen(
                 item { Spacer(modifier = Modifier.height(40.dp)) }
                 items(verses.size) { vIndex ->
                     val isSelected = vIndex == selectedVerse
-                    val isTapped = vIndex in tappedVerses
+                    val highlightedBorderColor = remember {
+                        Animatable(Color.Transparent)
+                    }
+                    val toHighlightColor = MaterialTheme.colorScheme.primary
 
+                    LaunchedEffect(isSelected) {
+                        if (isSelected) {
+                            highlightedBorderColor.animateTo(
+                                toHighlightColor,
+                                animationSpec = tween(durationMillis = 1000)
+                            )
+                            highlightedBorderColor.animateTo(
+                                Color.Transparent,
+                                animationSpec = tween(durationMillis = 1000)
+                            )
+
+                            delay(2000)
+                            mainViewModel.selectVerse(-1)
+                        }
+                    }
+
+                    val isTapped = vIndex in tappedVerses
                     val saveData = saved.find { it.verse == vIndex }
                     val verseText =
                         if (isHighlightMode) verses[vIndex].textRaw else verses[vIndex].textOriginal
                     val commentaryText = verses[vIndex].commentary
 
-                    val highlightedBorderColor = animateHighLightVerse(target = isSelected)
                     Column(modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp)
@@ -315,7 +347,8 @@ fun VerseScreen(
                             )
                             .border(
                                 BorderStroke(
-                                    2f.dp, highlightedBorderColor.value,
+                                    2f.dp,
+                                    highlightedBorderColor.value
                                 )
                             )
                             .pointerInput(Unit) {
@@ -564,10 +597,11 @@ fun DrawerItem(label: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
+            .padding(20.dp)
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
-            ) { onClick() }, contentAlignment = Alignment.Center
+            ) { onClick() }, contentAlignment = Alignment.CenterEnd
     ) {
         Text(
             text = label,
