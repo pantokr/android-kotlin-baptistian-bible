@@ -97,30 +97,33 @@ fun VersionScreen(
                     VERSION_LIST_KOR.forEachIndexed { vIndex, version ->
                         VersionItem(
                             isCurrent = currentVersion == vIndex,
+                            isLeft = true,
                             label = version,
                             onClick = {
                                 mainViewModel.updateVersion(vIndex)
                             })
                     }
                 }
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(8.dp))
                 Column(
                     modifier = Modifier
                         .weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     VersionItem(isCurrent = currentSubVersion == -1,
+                        isLeft = false,
                         label = "없음",
                         onClick = { mainViewModel.updateSubVersion(-1) })
                     VERSION_LIST_KOR.forEachIndexed { vIndex, version ->
                         if (vIndex != currentVersion) {
                             VersionItem(isCurrent = currentSubVersion == vIndex,
                                 label = version,
+                                isLeft = false,
                                 onClick = { mainViewModel.updateSubVersion(vIndex) })
                         }
                     }
                 }
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(8.dp))
             }
         }
     }
@@ -149,16 +152,16 @@ fun VersionAppBar(onBackClick: () -> Unit) {
 }
 
 @Composable
-fun VersionItem(isCurrent: Boolean, label: String, onClick: () -> Unit) {
+fun VersionItem(isCurrent: Boolean, isLeft: Boolean, label: String, onClick: () -> Unit) {
+    val bColor =
+        if (isLeft) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
-            .padding(top = 4.dp)
+            .padding(top = 8.dp)
             .background(
-                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(
-                    alpha = 0.25f
-                ),
+                color = if (isCurrent) bColor else bColor.copy(0.25f),
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable(
@@ -168,7 +171,7 @@ fun VersionItem(isCurrent: Boolean, label: String, onClick: () -> Unit) {
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }

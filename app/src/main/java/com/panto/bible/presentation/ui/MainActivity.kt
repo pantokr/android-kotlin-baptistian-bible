@@ -17,6 +17,7 @@ import com.panto.bible.data.local.LocalDataSource
 import com.panto.bible.data.local.PreferenceManager
 import com.panto.bible.presentation.ui.screen.DictionaryScreen
 import com.panto.bible.presentation.ui.screen.HymnScreen
+import com.panto.bible.presentation.ui.screen.SaveScreen
 import com.panto.bible.presentation.ui.screen.SearchScreen
 import com.panto.bible.presentation.ui.screen.SettingsScreen
 import com.panto.bible.presentation.ui.screen.SplashScreen
@@ -119,6 +120,12 @@ class MainActivity : ComponentActivity() {
                                             StandardCharsets.UTF_8.toString()
                                         )
                                     WebViewScreen(decodedUrl, navController)
+                                }
+                                composable("SaveScreen") {
+                                    SaveScreen(
+                                        mainViewModel,
+                                        navController
+                                    )
                                 }
                             }
                         }

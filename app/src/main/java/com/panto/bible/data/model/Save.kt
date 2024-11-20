@@ -6,8 +6,9 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "save")
 data class Save(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val time: Int,
+    val time: String,
     val page: Int,
     val verse: Int,
-    val color: Int
+    val color: Int,
+    val title: String
 )

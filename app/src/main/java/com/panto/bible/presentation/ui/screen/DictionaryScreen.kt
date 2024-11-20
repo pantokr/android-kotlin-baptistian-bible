@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,6 +53,7 @@ fun DictionaryScreen(
     dictionaryViewModel: DictionaryViewModel, navController: NavHostController
 ) {
     val searchedItems by dictionaryViewModel.searchedItems.collectAsState()
+    val isSearched by dictionaryViewModel.isSearched.collectAsState()
     var query by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
@@ -59,7 +61,6 @@ fun DictionaryScreen(
     }
 
     BackHandler {
-
         navController.navigate("VerseScreen") {
             popUpTo(navController.graph.id) {
                 inclusive = true
@@ -77,11 +78,11 @@ fun DictionaryScreen(
                 }
             })
 
-            DictionarySearchField(onSearchChanged = { q ->
-                query = q
-            }, onSearchClick = {
-                dictionaryViewModel.searchDictionary(query = query)
-            })
+            DictionarySearchField(
+                onSearchChanged = { q ->
+                    query = q
+                }
+            )
 
             HorizontalDivider(
                 modifier = Modifier
@@ -89,11 +90,52 @@ fun DictionaryScreen(
                     .background(Color.Gray.copy(alpha = 0.5f)),
             )
 
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .clickable(indication = null,
+                    interactionSource = remember { MutableInteractionSource() }) {
+                    dictionaryViewModel.searchDictionary(query = query)
+                }, Alignment.CenterEnd
+            ) {
+                Text(
+                    "검색",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textDecoration = TextDecoration.Underline
+                )
+            }
+
             if (searchedItems.isNotEmpty()) {
                 DictionarySearchResult(items = searchedItems, onItemClick = { i ->
                     val encodedUrl = URLEncoder.encode(i.link, StandardCharsets.UTF_8.toString())
                     navController.navigate("webViewScreen/$encodedUrl")
                 })
+            } else {
+                if (!isSearched) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            "검색 시 네이버 지식백과로 검색됩니다",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            "검색 결과가 없습니다",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
             }
         }
     }
@@ -123,17 +165,15 @@ fun DictionaryAppBar(onBackClick: () -> Unit) {
 
 @Composable
 fun DictionarySearchField(
-    onSearchChanged: (String) -> Unit, onSearchClick: () -> Unit
+    onSearchChanged: (String) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth(1f)
-            .height(60.dp), contentAlignment = Alignment.CenterStart
+    Column(
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ThemedImage(
@@ -170,27 +210,6 @@ fun DictionarySearchField(
                 },
                 maxLines = 1,
             )
-            Box(
-                modifier = Modifier
-                    .height(48.dp)
-                    .width(100.dp)
-                    .padding(horizontal = 20.dp)
-                    .background(
-                        MaterialTheme.colorScheme.secondary, shape = RoundedCornerShape(8.dp)
-                    )
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() },
-                    ) {
-                        onSearchClick()
-                    }, contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "검색",
-                    color = MaterialTheme.colorScheme.onSecondary,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
         }
     }
 }
@@ -203,21 +222,6 @@ fun DictionarySearchResult(
     LazyColumn(
         modifier = Modifier.fillMaxHeight()
     ) {
-        if (items.isEmpty()) {
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        "검색 결과가 없습니다",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-        }
         items(
             items.size
         ) { iIndex ->

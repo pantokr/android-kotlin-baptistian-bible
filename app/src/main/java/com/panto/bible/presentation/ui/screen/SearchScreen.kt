@@ -466,7 +466,7 @@ fun FindingGrid(
                         Text(
                             text = "${chapter + 1}",
                             textDecoration = TextDecoration.Underline,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }

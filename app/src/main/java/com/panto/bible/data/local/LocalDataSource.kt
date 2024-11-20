@@ -135,25 +135,55 @@ class LocalDataSource(private val context: Context) {
 
 
     // 저장
-    suspend fun insertSave(time: Int, page: Int, verse: Int, color: Int) =
+    suspend fun insertSave(time: String, page: Int, verse: Int, title: String) =
         withContext(Dispatchers.IO) {
             val database = BibleDatabase.getDatabase(context, "save")
             val saveDao = database.saveDao()
 
             val save = Save(
-                time = time, page = page, verse = verse, color = color
+                time = time, page = page, verse = verse, color = -1, title = title
+            )
+            saveDao.insertSave(save)
+        }
+
+    suspend fun insertHighlight(time: String, page: Int, verse: Int, color: Int) =
+        withContext(Dispatchers.IO) {
+            val database = BibleDatabase.getDatabase(context, "save")
+            val saveDao = database.saveDao()
+
+            val save = Save(
+                time = time, page = page, verse = verse, color = color, title = ""
             )
             saveDao.insertSave(save)
         }
 
     suspend fun getSavesByPage(page: Int): List<Save> =
-        withContext(Dispatchers.IO) { saveDao().getSavesByPage(page) }
+        withContext(Dispatchers.IO) {
+            saveDao().getSavesByPage(page)
+        }
+
+    suspend fun getHighlightsByPage(page: Int): List<Save> =
+        withContext(Dispatchers.IO) {
+            saveDao().getHighlightsByPage(page)
+        }
 
     suspend fun getAllSaves(): List<Save> = withContext(Dispatchers.IO) { saveDao().getAllSaves() }
 
-    suspend fun deleteSaves(page: Int, verse: Int) {
+    suspend fun deleteSave(page: Int, verse: Int, isHighlight: Boolean = false) {
         withContext(Dispatchers.IO) {
-            saveDao().deleteSaves(page, verse)
+            saveDao().deleteSave(page, verse)
+        }
+    }
+
+    suspend fun deleteAllSaves() {
+        withContext(Dispatchers.IO) {
+            saveDao().deleteAllSaves()
+        }
+    }
+
+    suspend fun deleteHighlight(page: Int, verse: Int) {
+        withContext(Dispatchers.IO) {
+            saveDao().deleteHighlight(page, verse)
         }
     }
 

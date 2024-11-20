@@ -13,14 +13,20 @@ interface SaveDao {
     @Query("SELECT COUNT(*) FROM save WHERE page = :page AND verse = :verse")
     suspend fun isSaveExist(page: Int, verse: Int): Int
 
-    @Query("SELECT * FROM save WHERE page = :page")
+    @Query("SELECT * FROM save WHERE page = :page AND color = -1")
     suspend fun getSavesByPage(page: Int): List<Save>
 
-    @Query("SELECT * FROM save ORDER BY time DESC")
+    @Query("SELECT * FROM save WHERE page = :page AND color != -1")
+    suspend fun getHighlightsByPage(page: Int): List<Save>
+
+    @Query("SELECT * FROM save WHERE color = -1 ORDER BY time DESC")
     suspend fun getAllSaves(): List<Save>
 
-    @Query("DELETE FROM save WHERE page = :page AND verse = :verse")
-    suspend fun deleteSaves(page: Int, verse: Int)
+    @Query("DELETE FROM save WHERE page = :page AND verse = :verse AND color = -1")
+    suspend fun deleteSave(page: Int, verse: Int)
+
+    @Query("DELETE FROM save WHERE page = :page AND verse = :verse AND color != -1")
+    suspend fun deleteHighlight(page: Int, verse: Int)
 
     @Query("DELETE FROM save")
     suspend fun deleteAllSaves()

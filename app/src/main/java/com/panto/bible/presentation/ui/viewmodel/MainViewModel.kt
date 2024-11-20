@@ -19,6 +19,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class MainViewModel(
     private val localDataSource: LocalDataSource, private val preferenceManager: PreferenceManager
@@ -36,7 +38,7 @@ class MainViewModel(
     private val _verses = MutableStateFlow<List<Verse>>(emptyList())
     val verses = _verses.asStateFlow()
 
-    val _subVerses = MutableStateFlow<List<String>>(emptyList())
+    private val _subVerses = MutableStateFlow<List<String>>(emptyList())
     val subVerses = _subVerses.asStateFlow()
 
     private val _selectedVerse = MutableStateFlow(-1)
@@ -53,6 +55,9 @@ class MainViewModel(
 
     private val _saved = MutableStateFlow<List<Save>>(emptyList())
     val saved = _saved.asStateFlow()
+
+    private val _allSaved = MutableStateFlow<List<List<Save>>>(emptyList())
+    val allSaved = _allSaved.asStateFlow()
 
     private val _searchedHymns = MutableStateFlow<List<Hymn>>(emptyList())
     val searchedHymns = _searchedHymns.asStateFlow()
@@ -85,6 +90,15 @@ class MainViewModel(
         if (_currentSubVersion.value == version) {
             updateSubVersion(-1)
         }
+
+        if (LANGUAGE_LIST[0].contains(version)) {
+            _currentBookList.value = BOOK_LIST_KOR
+            _currentBookShortList.value = BOOK_LIST_KOR_SHORT
+        } else {
+            _currentBookList.value = BOOK_LIST_ENG
+            _currentBookShortList.value = BOOK_LIST_ENG_SHORT
+        }
+
         getVersesByPage(_currentPage.value)
     }
 
@@ -105,7 +119,7 @@ class MainViewModel(
             preferenceManager.currentPage = page
 
             getSubVersesByPage(page)
-            getSavesByPage(page)
+            getHighlightsByPage(page)
         }
     }
 
@@ -121,7 +135,7 @@ class MainViewModel(
             preferenceManager.currentPage = p
 
             getSubVersesByPage(p)
-            getSavesByPage(p)
+            getHighlightsByPage(p)
         }
     }
 
@@ -135,7 +149,6 @@ class MainViewModel(
     }
 
     fun searchVerses(query: String) {
-
         viewModelScope.launch {
             if (query.length >= 2) {
                 _searchedVerses.value = localDataSource.searchVerses(_currentVersion.value, query)
@@ -147,7 +160,6 @@ class MainViewModel(
     }
 
     fun searchHymns(query: String) {
-
         viewModelScope.launch {
             if (query.length >= 2) {
                 _searchedHymns.value = localDataSource.searchHymns(query = query)
@@ -214,39 +226,85 @@ class MainViewModel(
         }
     }
 
-    fun insertSave(verse: Verse, color: Int) {
+    fun insertSaves(sVerses: List<Verse>, title: String) {
+        viewModelScope.launch {
+            try {
+                val currentTime =
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yy.MM.dd HH:mm"))
+
+                val t = if (title.isBlank()) currentTime.substringAfter('.') else title
+
+                sVerses.forEach {
+                    localDataSource.insertSave(
+                        time = currentTime,
+                        page = it.page,
+                        verse = it.verse,
+                        title = t
+                    )
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "저장 추가 실패: ${e.message}")
+            }
+        }
+    }
+
+    fun insertHighlights(hVerses: List<Verse>, color: Int) {
         viewModelScope.launch {
             if (color == -1) {
-                localDataSource.deleteSaves(verse.page, verse.verse)
+                hVerses.forEach {
+                    localDataSource.deleteHighlight(it.page, it.verse)
+                }
             } else {
                 try {
-                    val currentTime = System.currentTimeMillis().toInt()
-                    localDataSource.deleteSaves(verse.page, verse.verse)
+                    val currentTime =
+                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yy-MM-dd HH:mm"))
 
-                    localDataSource.insertSave(
-                        time = currentTime, page = verse.page, verse = verse.verse, color = color
-                    )
-
+                    hVerses.forEach {
+                        localDataSource.deleteHighlight(it.page, it.verse)
+                        localDataSource.insertHighlight(
+                            time = currentTime,
+                            page = it.page,
+                            verse = it.verse,
+                            color = color,
+                        )
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "저장 추가 실패: ${e.message}")
                 }
             }
 
-            getSavesByPage(_currentPage.value)
+            getHighlightsByPage(_currentPage.value)
         }
     }
 
-    fun getSavesByPage(page: Int) {
+    fun getAllSaves() {
         viewModelScope.launch {
-            val saves = localDataSource.getSavesByPage(page)
+            val saves = localDataSource.getAllSaves()
+            _allSaved.value = saves.groupBy { it.time }.values.toList()
+        }
+    }
+
+    fun getHighlightsByPage(page: Int) {
+        viewModelScope.launch {
+            val saves = localDataSource.getHighlightsByPage(page)
             _saved.value = saves
         }
     }
 
-    fun getAllSavesGroupedByTime() {
+    fun deleteSaves(saves: List<Save>) {
         viewModelScope.launch {
-            val saves = localDataSource.getAllSaves()
-            saves.groupBy { it.time }.values.toList()
+            saves.forEach { it ->
+                localDataSource.deleteSave(it.page, it.verse)
+            }
+            getAllSaves()
+        }
+    }
+
+    fun deleteAllSaves() {
+        viewModelScope.launch {
+            localDataSource.deleteAllSaves()
+            getAllSaves()
         }
     }
 

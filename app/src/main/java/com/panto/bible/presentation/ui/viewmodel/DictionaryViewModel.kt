@@ -14,8 +14,12 @@ class DictionaryViewModel : ViewModel() {
     private val _searchedItems = MutableStateFlow<List<Dictionary.Items>>(emptyList())
     val searchedItems = _searchedItems.asStateFlow()
 
+    private val _isSearched = MutableStateFlow(false)
+    val isSearched = _isSearched.asStateFlow()
+
     fun searchDictionary(query: String) {
         if (query.isBlank()) {
+            _isSearched.value = false
             _searchedItems.value = listOf()
             return
         }
@@ -32,6 +36,7 @@ class DictionaryViewModel : ViewModel() {
                         description = item.description.replace("<b>", "").replace("</b>", "")
                     )
                 }
+                _isSearched.value = true
                 _searchedItems.value = fDict
             }
         }

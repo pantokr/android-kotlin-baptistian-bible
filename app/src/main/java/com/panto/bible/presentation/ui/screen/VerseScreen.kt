@@ -2,6 +2,8 @@ package com.panto.bible.presentation.ui.screen
 
 import android.app.Activity
 import android.content.ClipData
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Animatable
@@ -37,12 +39,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -63,6 +67,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -74,9 +79,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.panto.bible.R
 import com.panto.bible.data.local.BibleConstant.SAVE_COLORS
@@ -155,10 +162,7 @@ fun VerseScreen(
             pageOffsetY.animateTo(0f, animationSpec = tween(durationMillis = 1000))
         }
     }
-    val navChecker: () -> Unit = {
-        isMenuDrawerVisible = false
-        mainViewModel.selectVerse(-1)
-    }
+
     val menuDrawerIndication: () -> Unit = {
         coroutineScope.launch {
             drawerState.apply {
@@ -169,6 +173,9 @@ fun VerseScreen(
 
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var saveComment by remember { mutableStateOf("") }
 
     var explanation by remember { mutableStateOf("") } // 성경 주석 내용
     val tappedVerses = remember { mutableStateListOf<Int>() } // Highlight 중인 구절
@@ -254,6 +261,11 @@ fun VerseScreen(
             HorizontalDivider()
             DrawerItem(label = "사전", onClick = {
                 navController.navigate("dictionaryScreen")
+                isMenuDrawerVisible = !isMenuDrawerVisible
+            })
+            HorizontalDivider()
+            DrawerItem(label = "저장된 말씀", onClick = {
+                navController.navigate("SaveScreen")
                 isMenuDrawerVisible = !isMenuDrawerVisible
             })
         }
@@ -371,8 +383,7 @@ fun VerseScreen(
                             Text(
                                 text = verses[vIndex].verseNumber.replace("-", "\n-\n"),
                                 style = TextStyle(
-                                    fontSize = fontSize.sp,
-                                    letterSpacing = 0.1f.sp
+                                    fontSize = fontSize.sp, letterSpacing = 0.1f.sp
                                 ),
                                 modifier = Modifier
                                     .padding(horizontal = 2.dp)
@@ -415,8 +426,7 @@ fun VerseScreen(
                                     Text(
                                         text = ">",
                                         style = TextStyle(
-                                            fontSize = (fontSize * 0.8f).sp,
-                                            letterSpacing = 0.1f.sp
+                                            fontSize = (fontSize * 0.8f).sp, letterSpacing = 0.1f.sp
                                         ),
                                         color = Color.Gray,
                                         modifier = Modifier
@@ -426,8 +436,7 @@ fun VerseScreen(
 
                                     Text(
                                         text = subVerses[vIndex], style = TextStyle(
-                                            fontSize = (fontSize * 0.8f).sp,
-                                            letterSpacing = 0.1f.sp
+                                            fontSize = (fontSize * 0.8f).sp, letterSpacing = 0.1f.sp
                                         ), color = Color.Gray
                                     )
                                 }
@@ -438,9 +447,10 @@ fun VerseScreen(
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(120.dp)) }
+                item { Spacer(modifier = Modifier.height(160.dp)) }
             }
 
+            // Commentary
             Box(modifier = Modifier.align(Alignment.BottomCenter)) {
                 CommentaryPopUp(
                     isPopupVisible = isPopupVisible,
@@ -448,6 +458,7 @@ fun VerseScreen(
                 )
             }
 
+            // AppBar
             Box(modifier = Modifier.align(Alignment.TopCenter)) {
                 AppBar(
                     isMenuVisible = isMenuVisible,
@@ -464,77 +475,14 @@ fun VerseScreen(
                 )
             }
 
+            // Floating Buttons
             Box(modifier = Modifier.align(Alignment.BottomCenter)) {
                 Column {
-                    AnimatedVisibility(visible = isPaletteVisible,
-                        enter = slideInVertically(animationSpec = tween(durationMillis = 500)) { it } + fadeIn(
-                            animationSpec = tween(durationMillis = 500)
-                        ),
-                        exit = slideOutVertically(animationSpec = tween(durationMillis = 500)) { it } + fadeOut(
-                            animationSpec = tween(durationMillis = 500)
-                        )) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 32.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                    shape = RoundedCornerShape(24.dp)
-                                ),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            SAVE_COLORS.forEachIndexed { colorIndex, color ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(60.dp)
-                                        .padding(12.dp)
-                                        .background(color = color, shape = CircleShape)
-                                        .border(
-                                            border = BorderStroke(
-                                                width = 1.dp,
-                                                color = MaterialTheme.colorScheme.onBackground.copy(
-                                                    0.5f
-                                                )
-                                            ), shape = CircleShape
-                                        )
-                                        .clickable(
-                                            indication = null,
-                                            interactionSource = remember { MutableInteractionSource() },
-                                        ) {
-                                            isPaletteVisible = !isPaletteVisible
-                                            settingsViewModel.updateSaveColor(colorIndex)
-                                        },
-                                )
-                            }
-                            Box(modifier = Modifier
-                                .size(60.dp)
-                                .padding(12.dp)
-                                .background(color = Color.Transparent, shape = CircleShape)
-                                .border(
-                                    border = BorderStroke(
-                                        width = 1.dp,
-                                        color = MaterialTheme.colorScheme.onBackground.copy(
-                                            0.5f
-                                        )
-                                    ), shape = CircleShape
-                                )
-                                .clickable(
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() },
-                                ) {
-                                    isPaletteVisible = !isPaletteVisible
-                                    settingsViewModel.updateSaveColor(-1)
-                                }) {
-                                ThemedImage(
-                                    iconResLight = R.drawable.eraser_light,
-                                    iconResDark = R.drawable.eraser_dark,
-                                    modifier = Modifier.padding(4.dp)
-                                )
-                            }
-                        }
-                    }
 
+                    ColorPalette(isHighlightMode = isHighlightMode, onColorClick = { c ->
+                        isPaletteVisible = !isPaletteVisible
+                        settingsViewModel.updateSaveColor(c)
+                    })
 
                     FloatingButtons(isMenuVisible = isMenuVisible,
                         isHighlightMode = isHighlightMode,
@@ -567,17 +515,36 @@ fun VerseScreen(
                             isHighlightMode = false
                         },
                         onColorButtonClick = {
-                            isPaletteVisible = !isPaletteVisible
+                            val selectedVerses = tappedVerses.map { verses[it] }
+                            mainViewModel.insertHighlights(
+                                hVerses = selectedVerses, color = saveColor
+                            )
                         },
                         onSaveButtonClick = {
                             if (tappedVerses.isEmpty()) {
-                                Toast.makeText(context, "선택된 절이 없습니다.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "선택된 절이 없습니다", Toast.LENGTH_SHORT).show()
                                 return@FloatingButtons
                             }
-                            for (v in tappedVerses.sorted()) {
-                                mainViewModel.insertSave(verse = verses[v], color = saveColor)
-                            }
+
+                            showSaveDialog = true
                         })
+                }
+
+                if (showSaveDialog) {
+                    SaveColorDialog(onSaveClick = { input ->
+                        showSaveDialog = false
+                        isHighlightMode = false
+
+                        val selectedVerses = tappedVerses.map { verses[it] }
+                        mainViewModel.insertSaves(
+                            sVerses = selectedVerses, title = input
+                        )
+
+                        Handler(Looper.getMainLooper()).post {
+                            val toast = Toast.makeText(context, "저장되었습니다", Toast.LENGTH_SHORT)
+                            toast.show()
+                        }
+                    }, onDismiss = { showSaveDialog = false })
                 }
             }
         }
@@ -627,8 +594,7 @@ fun AppBar(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color.Gray.copy(alpha = 0.5f),
-                                Color.Transparent
+                                Color.Gray.copy(alpha = 0.5f), Color.Transparent
                             )
                         )
                     )
@@ -677,6 +643,161 @@ fun AppBar(
     }
 }
 
+@Composable
+fun ColorPalette(isHighlightMode: Boolean, onColorClick: (Int) -> Unit) {
+
+    AnimatedVisibility(visible = isHighlightMode,
+        enter = slideInVertically(animationSpec = tween(durationMillis = 500)) { it } + fadeIn(
+            animationSpec = tween(durationMillis = 500)
+        ),
+        exit = slideOutVertically(animationSpec = tween(durationMillis = 500)) { it } + fadeOut(
+            animationSpec = tween(durationMillis = 500)
+        )) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
+                .background(
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(24.dp)
+                ),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SAVE_COLORS.forEachIndexed { cIndex, color ->
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .padding(12.dp)
+                        .background(color = color, shape = CircleShape)
+                        .border(
+                            border = BorderStroke(
+                                width = 1.dp, color = MaterialTheme.colorScheme.onBackground.copy(
+                                    0.5f
+                                )
+                            ), shape = CircleShape
+                        )
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
+                        ) {
+                            onColorClick(cIndex)
+                        },
+                )
+            }
+            Box(modifier = Modifier
+                .size(60.dp)
+                .padding(12.dp)
+                .background(color = Color.Transparent, shape = CircleShape)
+                .border(
+                    border = BorderStroke(
+                        width = 1.dp, color = MaterialTheme.colorScheme.onBackground.copy(
+                            0.5f
+                        )
+                    ), shape = CircleShape
+                )
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                ) {
+                    onColorClick(-1)
+                }) {
+                ThemedImage(
+                    iconResLight = R.drawable.eraser_light,
+                    iconResDark = R.drawable.eraser_dark,
+                    modifier = Modifier.padding(4.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun CommentaryIndexedText(
+    saveData: Save?,
+    verseText: String,
+    commentaryText: String?,
+    fontSize: Float,
+    paragraphSpacing: Float,
+    onCommentaryClick: (String) -> Unit
+) {
+    val commentaryList = commentaryText?.split('|')
+    val pattern = Pattern.compile("[1]?[ㄱ-ㅎ0-9a-z][)]")
+    val matcher = pattern.matcher(verseText)
+
+    val commentaryOrderList = mutableListOf<String>()
+    val textList = mutableListOf<String>()
+    var lastIndex = 0
+    while (matcher.find()) {
+        textList.add(verseText.substring(lastIndex, matcher.start()))
+        textList.add(verseText.substring(matcher.start(), matcher.end()))
+        commentaryOrderList.add(verseText.substring(matcher.start(), matcher.end()))
+        lastIndex = matcher.end()
+    }
+    textList.add(verseText.substring(lastIndex))
+    val words = textList.flatMap { it.split(" ") }.filter { it.isNotEmpty() }
+    FlowRow(modifier = Modifier) {
+        words.forEach { word ->
+            if (pattern.matcher(word).matches()) {
+                Text(
+                    text = word, style = TextStyle(
+                        fontSize = fontSize.sp,
+                        lineHeight = paragraphSpacing.sp,
+                        letterSpacing = 0.1f.sp
+                    ), color = Color.Red, modifier = Modifier.clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                        onClick = {
+                            val order = commentaryOrderList.indexOf(word)
+                            onCommentaryClick(commentaryList?.get(order) ?: "")
+                        },
+                    )
+                )
+            } else {
+                Text(text = "$word ", style = TextStyle(
+                    fontSize = fontSize.sp,
+                    lineHeight = paragraphSpacing.sp,
+                    letterSpacing = 0.1f.sp,
+                ), modifier = Modifier.drawBehind {
+                    val textWidth = size.width
+                    val textHeight = size.height
+                    if (saveData != null) {
+                        val c = saveData.color
+                        drawLine(
+                            color = SAVE_COLORS[c].copy(alpha = 0.25f),
+                            start = Offset(0f, textHeight * 0.75f),
+                            end = Offset(textWidth, textHeight * 0.75f),
+                            strokeWidth = fontSize * 1.5f
+                        )
+                    }
+                })
+            }
+        }
+    }
+}
+
+@Composable
+fun CommentaryPopUp(isPopupVisible: Boolean, explanation: String) {
+    AnimatedVisibility(
+        visible = isPopupVisible, enter = slideInVertically(
+            initialOffsetY = { it }, animationSpec = tween(durationMillis = 500)
+        ) + fadeIn(animationSpec = tween(durationMillis = 500)), exit = slideOutVertically(
+            targetOffsetY = { it }, animationSpec = tween(durationMillis = 500)
+        ) + fadeOut(animationSpec = tween(durationMillis = 500))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.secondary)
+                .padding(16.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = explanation, fontSize = 16.sp)
+            }
+        }
+    }
+}
 
 @Composable
 fun FloatingButtons(
@@ -790,88 +911,60 @@ fun FloatingButtons(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun CommentaryIndexedText(
-    saveData: Save?,
-    verseText: String,
-    commentaryText: String?,
-    fontSize: Float,
-    paragraphSpacing: Float,
-    onCommentaryClick: (String) -> Unit
-) {
-    val commentaryList = commentaryText?.split('|')
-    val pattern = Pattern.compile("[1]?[ㄱ-ㅎ0-9a-z][)]")
-    val matcher = pattern.matcher(verseText)
+fun SaveColorDialog(onSaveClick: (String) -> Unit, onDismiss: () -> Unit) {
+    var inputText by remember { mutableStateOf("") }
 
-    val commentaryOrderList = mutableListOf<String>()
-    val textList = mutableListOf<String>()
-    var lastIndex = 0
-    while (matcher.find()) {
-        textList.add(verseText.substring(lastIndex, matcher.start()))
-        textList.add(verseText.substring(matcher.start(), matcher.end()))
-        commentaryOrderList.add(verseText.substring(matcher.start(), matcher.end()))
-        lastIndex = matcher.end()
-    }
-    textList.add(verseText.substring(lastIndex))
-    val words = textList.flatMap { it.split(" ") }.filter { it.isNotEmpty() }
-    FlowRow(modifier = Modifier) {
-        words.forEach { word ->
-            if (pattern.matcher(word).matches()) {
-                Text(
-                    text = word, style = TextStyle(
-                        fontSize = fontSize.sp,
-                        lineHeight = paragraphSpacing.sp,
-                        letterSpacing = 0.1f.sp
-                    ), color = Color.Red, modifier = Modifier.clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() },
-                        onClick = {
-                            val order = commentaryOrderList.indexOf(word)
-                            onCommentaryClick(commentaryList?.get(order) ?: "")
-                        },
-                    )
-                )
-            } else {
-                Text(text = "$word ", style = TextStyle(
-                    fontSize = fontSize.sp,
-                    lineHeight = paragraphSpacing.sp,
-                    letterSpacing = 0.1f.sp,
-                ), modifier = Modifier.drawBehind {
-                    val textWidth = size.width
-                    val textHeight = size.height
-                    if (saveData != null) {
-                        val c = saveData.color
-                        drawLine(
-                            color = SAVE_COLORS[c].copy(alpha = 0.25f),
-                            start = Offset(0f, textHeight * 0.75f),
-                            end = Offset(textWidth, textHeight * 0.75f),
-                            strokeWidth = fontSize * 1.5f
-                        )
-                    }
-                })
-            }
-        }
-    }
-}
-
-@Composable
-fun CommentaryPopUp(isPopupVisible: Boolean, explanation: String) {
-    AnimatedVisibility(
-        visible = isPopupVisible, enter = slideInVertically(
-            initialOffsetY = { it }, animationSpec = tween(durationMillis = 500)
-        ) + fadeIn(animationSpec = tween(durationMillis = 500)), exit = slideOutVertically(
-            targetOffsetY = { it }, animationSpec = tween(durationMillis = 500)
-        ) + fadeOut(animationSpec = tween(durationMillis = 500))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.secondary)
-                .padding(16.dp)
+    Dialog(onDismissRequest = { onDismiss() }) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.padding(16.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = explanation, fontSize = 16.sp)
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                BasicTextField(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(0.5f)),
+                    value = inputText,
+                    onValueChange = { newText ->
+                        val reduced = newText.replace("\n", "")
+                        inputText = reduced
+                    },
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(value = MaterialTheme.colorScheme.onSurface),
+                    decorationBox = { innerTextField ->
+                        if (inputText.isEmpty()) {
+                            Text(
+                                text = "저장할 제목을 입력하세요", fontSize = 16.sp,
+                                style = TextStyle(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(
+                                        alpha = 0.5f
+                                    )
+                                ),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        innerTextField()
+                    },
+                    maxLines = 1,
+                )
+                HorizontalDivider()
+                Row(
+                    horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .clickable(indication = null,
+                            interactionSource = remember { MutableInteractionSource() }) {
+                            onSaveClick(inputText)
+                        }) {
+                        Text("저장", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
         }
     }
