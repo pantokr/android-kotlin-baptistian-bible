@@ -29,6 +29,7 @@ import com.panto.bible.presentation.ui.viewmodel.MainViewModelFactory
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModelFactory
 import com.panto.bible.ui.theme.BibleTheme
+import com.panto.bible.ui.theme.DarkThemeProvider
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
@@ -56,68 +57,75 @@ class MainActivity : ComponentActivity() {
         settingsViewModel = viewModels<SettingsViewModel> { settingsViewModelFactory }.value
 
         setContent {
-            val themeMode = settingsViewModel.themeMode.collectAsState()
-            BibleTheme(themeMode = themeMode.value) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val isLoading by mainViewModel.isLoading.collectAsState()
+            val themeMode by settingsViewModel.themeMode.collectAsState()
 
-                    if (isLoading) {
-                        SplashScreen(applicationContext)
-                    } else {
-                        val navController = rememberNavController()
-                        NavHost(navController, startDestination = "VerseScreen") {
-                            composable("VerseScreen") {
-                                VerseScreen(
-                                    mainViewModel,
-                                    settingsViewModel,
-                                    navController
-                                )
-                            }
-                            composable("SettingsScreen") {
-                                SettingsScreen(
-                                    settingsViewModel,
-                                    navController
-                                )
-                            }
-                            composable("SearchScreen") {
-                                SearchScreen(
-                                    mainViewModel,
-                                    navController
-                                )
-                            }
-                            composable("VersionScreen") {
-                                VersionScreen(
-                                    mainViewModel,
-                                    navController
-                                )
-                            }
-                            composable("HymnScreen") {
-                                HymnScreen(
-                                    mainViewModel,
-                                    navController
-                                )
-                            }
-                            composable("DictionaryScreen") {
-                                DictionaryScreen(
-                                    dictionaryViewModel,
-                                    navController
-                                )
-                            }
-                            composable("webViewScreen/{url}") { backStackEntry ->
-                                val encodedUrl = backStackEntry.arguments?.getString("url") ?: ""
-                                val decodedUrl =
-                                    URLDecoder.decode(encodedUrl, StandardCharsets.UTF_8.toString())
-                                WebViewScreen(decodedUrl, navController)
+            DarkThemeProvider(isDarkTheme = themeMode == 1) {
+
+                BibleTheme(themeMode = themeMode) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        val isLoading by mainViewModel.isLoading.collectAsState()
+
+                        if (isLoading) {
+                            SplashScreen(applicationContext)
+                        } else {
+                            val navController = rememberNavController()
+                            NavHost(navController, startDestination = "VerseScreen") {
+                                composable("VerseScreen") {
+                                    VerseScreen(
+                                        mainViewModel,
+                                        settingsViewModel,
+                                        navController
+                                    )
+                                }
+                                composable("SettingsScreen") {
+                                    SettingsScreen(
+                                        settingsViewModel,
+                                        navController
+                                    )
+                                }
+                                composable("SearchScreen") {
+                                    SearchScreen(
+                                        mainViewModel,
+                                        navController
+                                    )
+                                }
+                                composable("VersionScreen") {
+                                    VersionScreen(
+                                        mainViewModel,
+                                        navController
+                                    )
+                                }
+                                composable("HymnScreen") {
+                                    HymnScreen(
+                                        mainViewModel,
+                                        navController
+                                    )
+                                }
+                                composable("DictionaryScreen") {
+                                    DictionaryScreen(
+                                        dictionaryViewModel,
+                                        navController
+                                    )
+                                }
+                                composable("webViewScreen/{url}") { backStackEntry ->
+                                    val encodedUrl =
+                                        backStackEntry.arguments?.getString("url") ?: ""
+                                    val decodedUrl =
+                                        URLDecoder.decode(
+                                            encodedUrl,
+                                            StandardCharsets.UTF_8.toString()
+                                        )
+                                    WebViewScreen(decodedUrl, navController)
+                                }
                             }
                         }
                     }
                 }
             }
         }
-
     }
 }
 

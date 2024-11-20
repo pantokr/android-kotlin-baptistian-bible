@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.panto.bible.R
-import com.panto.bible.ui.ThemedIconButton
+import com.panto.bible.ui.ThemedVectorIconButton
 
 @Composable
 fun WebViewScreen(
@@ -64,8 +64,7 @@ fun WebViewAppBar(onBackClick: () -> Unit) {
         Box(
             modifier = Modifier.align(Alignment.CenterStart)
         ) {
-            ThemedIconButton(iconResLight = R.drawable.back_light,
-                iconResDark = R.drawable.back_dark,
+            ThemedVectorIconButton(iconRes = R.drawable.back_light,
                 modifier = Modifier.size(48.dp),
                 onClick = { onBackClick() })
         }

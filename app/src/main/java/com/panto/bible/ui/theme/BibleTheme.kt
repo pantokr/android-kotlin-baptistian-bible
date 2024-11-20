@@ -1,6 +1,5 @@
 package com.panto.bible.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -86,7 +85,7 @@ fun BibleTheme(
     val isDarkMode = when (themeMode) {
         0 -> false // Light
         1 -> true  // Dark
-        else -> isSystemInDarkTheme() // System
+        else -> LocalDarkTheme.current // System
     }
 
     val colors = if (isDarkMode) {

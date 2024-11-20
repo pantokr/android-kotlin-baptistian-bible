@@ -61,6 +61,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -83,8 +84,8 @@ import com.panto.bible.data.model.Save
 import com.panto.bible.data.model.Verse
 import com.panto.bible.presentation.ui.viewmodel.MainViewModel
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
-import com.panto.bible.ui.ThemedIcon
-import com.panto.bible.ui.ThemedIconButton
+import com.panto.bible.ui.ThemedImage
+import com.panto.bible.ui.ThemedVectorIconButton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.regex.Pattern
@@ -227,15 +228,14 @@ fun VerseScreen(
                 Box(
                     modifier = Modifier.align(Alignment.TopEnd)
                 ) {
-                    ThemedIconButton(iconResLight = R.drawable.close_light,
-                        iconResDark = R.drawable.close_dark,
+                    ThemedVectorIconButton(iconRes = R.drawable.close_light,
                         modifier = Modifier.size(60.dp),
                         onClick = { isMenuDrawerVisible = !isMenuDrawerVisible })
                 }
                 Box(
                     modifier = Modifier.align(Alignment.Center)
                 ) {
-                    ThemedIcon(
+                    ThemedImage(
                         iconResLight = R.drawable.icon,
                         iconResDark = R.drawable.icon,
                         modifier = Modifier.size(120.dp)
@@ -302,12 +302,10 @@ fun VerseScreen(
                     LaunchedEffect(isSelected) {
                         if (isSelected) {
                             highlightedBorderColor.animateTo(
-                                toHighlightColor,
-                                animationSpec = tween(durationMillis = 1000)
+                                toHighlightColor, animationSpec = tween(durationMillis = 1000)
                             )
                             highlightedBorderColor.animateTo(
-                                Color.Transparent,
-                                animationSpec = tween(durationMillis = 1000)
+                                Color.Transparent, animationSpec = tween(durationMillis = 1000)
                             )
 
                             delay(2000)
@@ -347,8 +345,7 @@ fun VerseScreen(
                             )
                             .border(
                                 BorderStroke(
-                                    2f.dp,
-                                    highlightedBorderColor.value
+                                    2f.dp, highlightedBorderColor.value
                                 )
                             )
                             .pointerInput(Unit) {
@@ -375,7 +372,6 @@ fun VerseScreen(
                                 text = verses[vIndex].verseNumber.replace("-", "\n-\n"),
                                 style = TextStyle(
                                     fontSize = fontSize.sp,
-                                    lineHeight = paragraphSpacing.sp,
                                     letterSpacing = 0.1f.sp
                                 ),
                                 modifier = Modifier
@@ -419,12 +415,10 @@ fun VerseScreen(
                                     Text(
                                         text = ">",
                                         style = TextStyle(
-                                            fontSize = fontSize.sp,
-                                            lineHeight = paragraphSpacing.sp,
+                                            fontSize = (fontSize * 0.8f).sp,
                                             letterSpacing = 0.1f.sp
                                         ),
                                         color = Color.Gray,
-
                                         modifier = Modifier
                                             .padding(horizontal = 2.dp)
                                             .width((fontSize * 1.8).dp),
@@ -432,8 +426,7 @@ fun VerseScreen(
 
                                     Text(
                                         text = subVerses[vIndex], style = TextStyle(
-                                            fontSize = fontSize.sp,
-                                            lineHeight = paragraphSpacing.sp,
+                                            fontSize = (fontSize * 0.8f).sp,
                                             letterSpacing = 0.1f.sp
                                         ), color = Color.Gray
                                     )
@@ -533,7 +526,7 @@ fun VerseScreen(
                                     isPaletteVisible = !isPaletteVisible
                                     settingsViewModel.updateSaveColor(-1)
                                 }) {
-                                ThemedIcon(
+                                ThemedImage(
                                     iconResLight = R.drawable.eraser_light,
                                     iconResDark = R.drawable.eraser_dark,
                                     modifier = Modifier.padding(4.dp)
@@ -631,12 +624,19 @@ fun AppBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Gray.copy(alpha = 0.5f),
+                                Color.Transparent
+                            )
+                        )
+                    )
                     .padding(10.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ThemedIconButton(iconResLight = R.drawable.menu_light,
-                    iconResDark = R.drawable.menu_dark,
+                ThemedVectorIconButton(iconRes = R.drawable.menu_light,
                     modifier = Modifier.size(48.dp),
                     onClick = { onMenuDrawerClick() })
                 Row(
@@ -653,7 +653,7 @@ fun AppBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start
                 ) {
-                    ThemedIcon(
+                    ThemedImage(
                         iconResLight = R.drawable.search_light,
                         iconResDark = R.drawable.search_dark,
                         modifier = Modifier
@@ -669,8 +669,7 @@ fun AppBar(
                             .alpha(0.5f)
                     )
                 }
-                ThemedIconButton(iconResLight = R.drawable.translate_light,
-                    iconResDark = R.drawable.translate_dark,
+                ThemedVectorIconButton(iconRes = R.drawable.translate_light,
                     modifier = Modifier.size(48.dp),
                     onClick = { onVersionClick() })
             }
@@ -706,8 +705,7 @@ fun FloatingButtons(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ThemedIconButton(iconResLight = R.drawable.highlight_light,
-                    iconResDark = R.drawable.highlight_dark,
+                ThemedVectorIconButton(iconRes = R.drawable.highlight_light,
                     modifier = Modifier
                         .size(60.dp)
                         .shadow(4.dp, shape = CircleShape)
@@ -735,24 +733,21 @@ fun FloatingButtons(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ThemedIconButton(iconResLight = R.drawable.copy_light,
-                    iconResDark = R.drawable.copy_dark,
+                ThemedVectorIconButton(iconRes = R.drawable.copy_light,
                     modifier = Modifier
                         .size(60.dp)
                         .shadow(4.dp, shape = CircleShape)
                         .background(MaterialTheme.colorScheme.primary, shape = CircleShape),
                     onClick = { onCopyButtonClick() })
 
-                ThemedIconButton(iconResLight = R.drawable.select_all_light,
-                    iconResDark = R.drawable.select_all_dark,
+                ThemedVectorIconButton(iconRes = R.drawable.select_all_light,
                     modifier = Modifier
                         .size(60.dp)
                         .shadow(4.dp, shape = CircleShape)
                         .background(MaterialTheme.colorScheme.primary, shape = CircleShape),
                     onClick = { onSelectAllButtonClick() })
 
-                ThemedIconButton(iconResLight = R.drawable.close_light,
-                    iconResDark = R.drawable.close_dark,
+                ThemedVectorIconButton(iconRes = R.drawable.close_light,
                     modifier = Modifier
                         .size(60.dp)
                         .shadow(4.dp, shape = CircleShape)
@@ -775,7 +770,7 @@ fun FloatingButtons(
                             tint = currentColor
                         )
                     } else {
-                        ThemedIcon(
+                        ThemedImage(
                             iconResLight = R.drawable.eraser_light,
                             iconResDark = R.drawable.eraser_dark,
                             modifier = Modifier.padding(12.dp)
@@ -783,8 +778,7 @@ fun FloatingButtons(
                     }
                 }
 
-                ThemedIconButton(iconResLight = R.drawable.save_light,
-                    iconResDark = R.drawable.save_dark,
+                ThemedVectorIconButton(iconRes = R.drawable.save_light,
                     modifier = Modifier
                         .size(60.dp)
                         .shadow(4.dp, shape = CircleShape)
@@ -849,7 +843,7 @@ fun CommentaryIndexedText(
                     if (saveData != null) {
                         val c = saveData.color
                         drawLine(
-                            color = SAVE_COLORS[c].copy(alpha = 0.5f),
+                            color = SAVE_COLORS[c].copy(alpha = 0.25f),
                             start = Offset(0f, textHeight * 0.75f),
                             end = Offset(textWidth, textHeight * 0.75f),
                             strokeWidth = fontSize * 1.5f

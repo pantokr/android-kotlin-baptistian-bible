@@ -42,8 +42,8 @@ import androidx.navigation.NavHostController
 import com.panto.bible.R
 import com.panto.bible.data.model.api.Dictionary
 import com.panto.bible.presentation.ui.viewmodel.DictionaryViewModel
-import com.panto.bible.ui.ThemedIcon
-import com.panto.bible.ui.ThemedIconButton
+import com.panto.bible.ui.ThemedImage
+import com.panto.bible.ui.ThemedVectorIconButton
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -109,8 +109,7 @@ fun DictionaryAppBar(onBackClick: () -> Unit) {
         Box(
             modifier = Modifier.align(Alignment.CenterStart)
         ) {
-            ThemedIconButton(iconResLight = R.drawable.back_light,
-                iconResDark = R.drawable.back_dark,
+            ThemedVectorIconButton(iconRes = R.drawable.back_light,
                 modifier = Modifier.size(48.dp),
                 onClick = { onBackClick() })
         }
@@ -137,7 +136,7 @@ fun DictionarySearchField(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ThemedIcon(
+            ThemedImage(
                 iconResLight = R.drawable.search_light,
                 iconResDark = R.drawable.search_dark,
                 modifier = Modifier

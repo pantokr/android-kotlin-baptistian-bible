@@ -32,6 +32,7 @@ abstract class BibleDatabase : RoomDatabase() {
             val dbName = when (version) {
                 "han" -> "han.db"
                 "gae" -> "gae.db"
+                "kjv" -> "kjv.db"
                 "history" -> "history.db"
                 "save" -> "save.db"
                 "hymns" -> "hymns.db"

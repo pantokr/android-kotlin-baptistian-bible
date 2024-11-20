@@ -30,7 +30,7 @@ import androidx.navigation.NavHostController
 import com.panto.bible.R
 import com.panto.bible.data.local.BibleConstant.VERSION_LIST_KOR
 import com.panto.bible.presentation.ui.viewmodel.MainViewModel
-import com.panto.bible.ui.ThemedIconButton
+import com.panto.bible.ui.ThemedVectorIconButton
 
 @Composable
 fun VersionScreen(
@@ -136,8 +136,7 @@ fun VersionAppBar(onBackClick: () -> Unit) {
         Box(
             modifier = Modifier.align(Alignment.CenterStart)
         ) {
-            ThemedIconButton(iconResLight = R.drawable.back_light,
-                iconResDark = R.drawable.back_dark,
+            ThemedVectorIconButton(iconRes = R.drawable.back_light,
                 modifier = Modifier.size(48.dp),
                 onClick = { onBackClick() })
         }

@@ -66,7 +66,7 @@ import com.panto.bible.R
 import com.panto.bible.data.local.BibleConstant.BOOK_CHAPTER_COUNT_LIST
 import com.panto.bible.data.model.Verse
 import com.panto.bible.presentation.ui.viewmodel.MainViewModel
-import com.panto.bible.ui.ThemedIconButton
+import com.panto.bible.ui.ThemedVectorIconButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -336,8 +336,7 @@ fun SearchField(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ThemedIconButton(iconResLight = R.drawable.back_light,
-                iconResDark = R.drawable.back_dark,
+            ThemedVectorIconButton(iconRes = R.drawable.back_light,
                 modifier = Modifier.size(48.dp),
                 onClick = { onBackClick() })
             Spacer(Modifier.width(12.dp))
@@ -386,16 +385,14 @@ fun FloatingHistoryButton(isHistoryExpanded: Boolean, onHistoryButtonClick: () -
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (!isHistoryExpanded) {
-            ThemedIconButton(iconResLight = R.drawable.history_light,
-                iconResDark = R.drawable.history_dark,
+            ThemedVectorIconButton(iconRes = R.drawable.history_light,
                 modifier = Modifier
                     .size(60.dp)
                     .shadow(4.dp, shape = CircleShape)
                     .background(MaterialTheme.colorScheme.primary, shape = CircleShape),
                 onClick = { onHistoryButtonClick() })
         } else {
-            ThemedIconButton(iconResLight = R.drawable.close_light,
-                iconResDark = R.drawable.close_dark,
+            ThemedVectorIconButton(iconRes = R.drawable.close_light,
                 modifier = Modifier
                     .size(60.dp)
                     .shadow(4.dp, shape = CircleShape)
@@ -682,8 +679,7 @@ fun HistoryVerseItem(
         Box(
             modifier = Modifier.align(Alignment.TopEnd)
         ) {
-            ThemedIconButton(iconResLight = R.drawable.delete_light,
-                iconResDark = R.drawable.delete_dark,
+            ThemedVectorIconButton(iconRes = R.drawable.delete_light,
                 modifier = Modifier.size(48.dp),
                 onClick = { onDeleteVerseClick(verse, query) })
         }

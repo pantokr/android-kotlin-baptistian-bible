@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.panto.bible.R
 import com.panto.bible.presentation.ui.viewmodel.SettingsViewModel
-import com.panto.bible.ui.ThemedIconButton
+import com.panto.bible.ui.ThemedVectorIconButton
 
 @Composable
 fun SettingsScreen(
@@ -76,7 +76,7 @@ fun SettingsScreen(
                 Text("글자 크기")
                 Box(modifier = Modifier.width(160.dp)) {
                     SettingsSlider(value = fontSize,
-                        valueRange = 8f..24f,
+                        valueRange = 12f..24f,
                         onValueChange = { value ->
                             settingsViewModel.updateFontSize(value)
                             exFontSize = value
@@ -179,8 +179,7 @@ fun SettingsAppBar(onBackClick: () -> Unit) {
         Box(
             modifier = Modifier.align(Alignment.CenterStart)
         ) {
-            ThemedIconButton(iconResLight = R.drawable.back_light,
-                iconResDark = R.drawable.back_dark,
+            ThemedVectorIconButton(iconRes = R.drawable.back_light,
                 modifier = Modifier.size(48.dp),
                 onClick = { onBackClick() })
         }

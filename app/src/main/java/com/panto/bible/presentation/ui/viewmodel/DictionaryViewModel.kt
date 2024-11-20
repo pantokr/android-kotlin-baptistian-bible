@@ -23,11 +23,16 @@ class DictionaryViewModel : ViewModel() {
         viewModelScope.launch {
 
             val dict = dictionaryDataSource.getDictionary(query = query)
-            val filteredLinks = dict?.items?.filter { it.link.contains("categoryId=51387") }
-            if (!filteredLinks.isNullOrEmpty()) {
-                _searchedItems.value = filteredLinks
-            } else {
+            if (dict == null) {
                 _searchedItems.value = listOf()
+            } else {
+                val fDict = dict.items.filter { it.link.contains("categoryId=51387") }.map { item ->
+                    item.copy(
+                        title = item.title.replace("<b>", "").replace("</b>", ""),
+                        description = item.description.replace("<b>", "").replace("</b>", "")
+                    )
+                }
+                _searchedItems.value = fDict
             }
         }
     }

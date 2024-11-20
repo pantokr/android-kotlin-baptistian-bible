@@ -7,10 +7,8 @@ import com.panto.bible.data.local.BibleConstant.BOOK_LIST_ENG
 import com.panto.bible.data.local.BibleConstant.BOOK_LIST_ENG_SHORT
 import com.panto.bible.data.local.BibleConstant.BOOK_LIST_KOR
 import com.panto.bible.data.local.BibleConstant.BOOK_LIST_KOR_SHORT
-import com.panto.bible.data.local.BibleConstant.HAN_GAE_DIFFERENCE_REFERENCE
 import com.panto.bible.data.local.BibleConstant.LANGUAGE_LIST
 import com.panto.bible.data.local.BibleConstant.TAG
-import com.panto.bible.data.local.BibleConstant.VERSE_COUNT_LIST
 import com.panto.bible.data.local.BibleConstant.VERSION_LIST
 import com.panto.bible.data.local.LocalDataSource
 import com.panto.bible.data.local.PreferenceManager
@@ -132,8 +130,6 @@ class MainViewModel(
             if (_currentSubVersion.value != -1) {
                 val verses = localDataSource.getVersesByPage(_currentSubVersion.value, page)
                 _subVerses.value = verses.map { it.textRaw }
-
-                handleBibleVersionDifference()
             }
         }
     }
@@ -256,23 +252,17 @@ class MainViewModel(
 
     private fun loadVerses() {
         viewModelScope.launch {
+            var currentTotal = 0
             for (version in VERSION_LIST) {
-                if (localDataSource.getVersesCount(VERSION_LIST.indexOf(version)) == 0) {
+                val currentCount = localDataSource.getVersesCount(VERSION_LIST.indexOf(version))
+                if (currentCount == 0) {
+                    Log.d(TAG, "${version} 구절 로드 시작")
                     localDataSource.loadVersesFromCSV(
                         "${version}.csv", VERSION_LIST.indexOf(version)
                     )
+                    Log.d(TAG, "${version} ${currentCount} 페이지 구절 로드 종료")
+                    currentTotal += currentCount
                 }
-            }
-            while (true) {
-                var currentCount = 0
-                for (version in VERSION_LIST) {
-                    currentCount += localDataSource.getVersesCount(VERSION_LIST.indexOf(version))
-                }
-                if (currentCount >= VERSE_COUNT_LIST.sum()) {
-                    Log.d(TAG, "모든 구절 로드 완료")
-                    break
-                }
-                delay(500)
             }
 
             getVersesByPage(_currentPage.value)
@@ -292,42 +282,6 @@ class MainViewModel(
         viewModelScope.launch {
             if (localDataSource.getHymnsCount() == 0) {
                 localDataSource.loadHymnsFromCSV()
-            }
-        }
-    }
-
-    private fun handleBibleVersionDifference() {
-        val bVersion = _currentVersion.value
-        val sVersion = _currentSubVersion.value
-
-        val bIndex = _verses.value[0].book
-        val cIndex = _verses.value[0].chapter
-
-        var cur_ref = HAN_GAE_DIFFERENCE_REFERENCE.toMutableList()
-        if (bVersion == 0 && sVersion == 1) {
-            cur_ref = HAN_GAE_DIFFERENCE_REFERENCE.toMutableList()
-        } else if (bVersion == 1 && sVersion == 0) {
-            cur_ref = HAN_GAE_DIFFERENCE_REFERENCE.map {
-                it.copy(offset = it.offset * -1)
-            }.toMutableList()
-        }
-
-        val result = cur_ref.filter { it.book == bIndex && it.chapter == cIndex }
-        result.forEach {
-            val offset = it.offset
-            val verse = it.verse
-            if (offset == 1) {
-                _subVerses.value =
-                    _subVerses.value.take(verse) + (_subVerses.value[verse] + " " + _subVerses.value[verse + 1]) + _subVerses.value.drop(
-                        verse + 2
-                    )
-
-            } else {
-                _subVerses.value = _subVerses.value.toMutableList().apply {
-                    if (verse + 1 in 0..size) {
-                        add(verse + 1, "(없거나 이전 절에 포함됨)")
-                    }
-                }
             }
         }
     }
