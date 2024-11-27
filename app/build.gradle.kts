@@ -20,11 +20,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            
         }
     }
     compileOptions {
@@ -43,6 +39,10 @@ android {
 }
 
 dependencies {
+    implementation(libs.bcpkix.jdk15to18)
+    implementation(libs.conscrypt.android)
+    implementation(libs.openjsse)
+
     implementation(libs.retrofit)
     implementation(libs.retrofit2.converter.gson)
 

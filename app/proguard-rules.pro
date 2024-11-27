@@ -19,3 +19,23 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# BouncyCastle 관련 경고 무시
+-dontwarn org.bouncycastle.jsse.BCSSLParameters
+-dontwarn org.bouncycastle.jsse.BCSSLSocket
+-dontwarn org.bouncycastle.jsse.provider.BouncyCastleJsseProvider
+
+# Conscrypt 관련 경고 무시
+-dontwarn org.conscrypt.Conscrypt$Version
+-dontwarn org.conscrypt.Conscrypt
+-dontwarn org.conscrypt.ConscryptHostnameVerifier
+-dontwarn com.android.org.conscrypt.SSLParametersImpl
+-dontwarn org.apache.harmony.xnet.provider.jsse.SSLParametersImpl
+
+# OpenJSSE 관련 경고 무시
+-dontwarn org.openjsse.javax.net.ssl.SSLParameters
+-dontwarn org.openjsse.javax.net.ssl.SSLSocket
+-dontwarn org.openjsse.net.ssl.OpenJSSE
+
+# OkHttp 내부 클래스 유지 (TLS 확장 관련)
+-keep class okhttp3.internal.platform.** { *; }
