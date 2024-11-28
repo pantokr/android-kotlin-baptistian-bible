@@ -41,9 +41,6 @@ class MainActivity : ComponentActivity() {
     private val dictionaryViewModel: DictionaryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        //  deleteDatabase("han_database.db")
-        //  deleteDatabase("han_database.db")
-        //  deleteDatabase("default_database.db")
         super.onCreate(savedInstanceState)
 
         actionBar?.hide()

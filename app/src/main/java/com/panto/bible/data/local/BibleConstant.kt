@@ -8,7 +8,6 @@ object BibleConstant {
     val VERSION_LIST = arrayOf("han", "gae", "kjv", "niv") // 업로드
     val VERSION_LIST_KOR = arrayOf("개역한글", "개역개정", "KJV", "NIV") // 한국어
     val LANGUAGE_LIST = arrayOf(arrayOf(0, 1), arrayOf(2, 3)) // [0] -> Kor, [1] -> Eng
-    val VERSE_COUNT_LIST = arrayOf(31102, 31102, 31102, 31102)
 
     val BOOK_LIST_KOR = arrayOf(
         "창세기",
@@ -314,19 +313,4 @@ object BibleConstant {
         Color(0xFF75FB4C),
         Color(0xFF69ABFF),
     )
-
-//    val HAN_GAE_DIFFERENCE_REFERENCE = arrayOf(
-//        // -1 -> HAN+1, 1 -> GAE+1
-//        BibleDifferenceReference(book = 5, chapter = 1, verse = 11, offset = 1),
-//        BibleDifferenceReference(book = 8, chapter = 29, verse = 29, offset = 1),
-//        BibleDifferenceReference(book = 17, chapter = 30, verse = 32, offset = 1),
-//        BibleDifferenceReference(book = 17, chapter = 34, verse = 9, offset = 1),
-//        BibleDifferenceReference(book = 21, chapter = 5, verse = 12, offset = -1),
-//        BibleDifferenceReference(book = 22, chapter = 6, verse = 7, offset = 1),
-//        BibleDifferenceReference(book = 22, chapter = 29, verse = 0, offset = 1),
-//        BibleDifferenceReference(book = 22, chapter = 47, verse = 0, offset = 1),
-//        BibleDifferenceReference(book = 23, chapter = 20, verse = 0, offset = 1),
-//        BibleDifferenceReference(book = 25, chapter = 24, verse = 1, offset = 1),
-//        BibleDifferenceReference(book = 43, chapter = 23, verse = 6, offset = -1),
-//    )
 }
