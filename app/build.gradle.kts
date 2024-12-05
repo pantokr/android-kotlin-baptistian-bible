@@ -20,7 +20,6 @@ android {
 
     buildTypes {
         release {
-            
         }
     }
     compileOptions {

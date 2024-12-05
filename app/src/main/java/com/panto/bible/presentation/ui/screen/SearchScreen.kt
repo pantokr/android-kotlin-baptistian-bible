@@ -84,8 +84,6 @@ fun SearchScreen(
     val historyVerses by mainViewModel.historyVerses.collectAsState()
     val historyQueries by mainViewModel.historyQueries.collectAsState()
 
-    val focusRequester = remember { FocusRequester() }
-
     var isHistoryExpanded by remember { mutableStateOf(false) }
 
     val findingListState = rememberLazyListState()
@@ -103,7 +101,6 @@ fun SearchScreen(
     LaunchedEffect(Unit) {
         mainViewModel.searchVerses("")
         mainViewModel.getHistories()
-        // focusRequester.requestFocus()
         findingListState.scrollToItem(
             max(
                 0, selectedBook.intValue - findingListState.layoutInfo.visibleItemsInfo.size / 2
@@ -160,7 +157,7 @@ fun SearchScreen(
                     Column(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        if (searchedVerses.isEmpty()) {
+                        if (query.value.length < 2) {
                             FindingGrid(currentBookList = currentBookList,
                                 selectedBook = selectedBook,
                                 findingListState = findingListState,
@@ -351,21 +348,29 @@ fun SearchField(
                         query.value = reduced
                         onSearchChanged(reduced)
                     },
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                    textStyle = TextStyle(
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 16.sp
+                    ),
                     cursorBrush = SolidColor(value = MaterialTheme.colorScheme.onSurface),
                     decorationBox = { innerTextField ->
-                        if (query.value.isEmpty()) {
-                            Text(
-                                text = "검색 시 2자 이상 입력해 주세요", fontSize = 16.sp,
-                                style = TextStyle(
-                                    color = MaterialTheme.colorScheme.onSurface.copy(
-                                        alpha = 0.5f
-                                    )
-                                ),
-                                maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            )
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (query.value.isEmpty()) {
+                                Text(
+                                    text = "검색 시 2자 이상 입력해 주세요",
+                                    style = TextStyle(
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                        fontSize = 16.sp
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            innerTextField()
                         }
-                        innerTextField()
                     },
                     maxLines = 1,
                 )
